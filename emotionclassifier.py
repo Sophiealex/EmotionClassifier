@@ -42,29 +42,32 @@ class EmotionClassifier:
         :rtype: A TensorFlow model.
         """
         weights = {
-            'wc1': tf.Variable(tf.random_normal([5, 5, 1, 32])),
-            'wc2': tf.Variable(tf.random_normal([5, 5, 32, 64])),
-            'wd1': tf.Variable(tf.random_normal([7*7*64, 1024])),
-            'out': tf.Variable(tf.random_normal([1024, num_classes]))
+            'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
+            'wc2': tf.Variable(tf.random_normal([5, 5, 64, 64])),
+            'lc1': tf.Variable(tf.random_normal([3, 3, 32, 32])),
+            'lc2': tf.Variable(tf.random_normal([3, 3, 32, 32])),
+            'out': tf.Variable(tf.random_normal([32, 8]))
         }
         biases = {
-            'bc1': tf.Variable(tf.random_normal([32])),
+            'bc1': tf.Variable(tf.random_normal([64])),
             'bc2': tf.Variable(tf.random_normal([64])),
-            'bd1': tf.Variable(tf.random_normal([1024])),
-            'out': tf.Variable(tf.random_normal([num_classes]))
+            'bl1': tf.Variable(tf.random_normal([32])),
+            'bl2': tf.Variable(tf.random_normal([32])),
+            'out': tf.Variable(tf.random_normal([8]))
         }
 
-        m = tf.reshape(self.x, shape=[-1, 28, 28, 1])
-        m = tf.nn.bias_add(tf.nn.conv1d(m, weights['wc1'], stride=[1, 1, 1, 1], padding='SAME'), biases['bc1'])
-        m = tf.nn.max_pool(m, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-        m = tf.nn.bias_add(tf.nn.conv1d(m, weights['wc2'], stride=[1, 1, 1, 1], padding='SAME'), biases['bc2'])
-        m = tf.nn.max_pool(m, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        input = tf.reshape(self.x, shape=[-1, 88, 88, 1])
+        conv1 = tf.nn.bias_add(tf.nn.conv2d(input, weights['wc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bc1'])
+        conv1 = tf.nn.max_pool(conv1, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
+        conv2 = tf.nn.bias_add(tf.nn.conv2d(conv1, weights['wc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bc2'])
+        conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
 
-        m = tf.reshape(m, [-1, weights['wd1'].get_shape().as_list()[0]])
-        m = tf.add(tf.matmul(m, weights['wd1']), biases['bc1'])
-        m = tf.nn.relu(m)
-        m = tf.nn.dropout(m, 0.7)
-        return tf.add(tf.matmul(m, weights['out']), biases['bd1'])
+        local1 = tf.nn.bias_add(tf.nn.depthwise_conv2d(conv2, weights['lc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl1'])
+        local1 = tf.nn.dropout(local1, 0.5)
+        local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl2'])
+        local2 = tf.nn.dropout(local2, 0.5)
+
+        return tf.add(tf.matmul(local2, weights['out']), biases['out'])
 
     def train(self, training_data, testing_data, epochs=50000):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
