@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 
-def split_data(data, test_percent=0.2):
+def divide_data(data, test_percent=0.2):
     """ Splits input data into training and testing data.
     :param data: A list to be split
     :type data: A list
@@ -18,6 +18,19 @@ def split_data(data, test_percent=0.2):
     training_data = shuffled[test_length:]
     testing_data = shuffled[:test_length]
     return training_data, testing_data
+
+
+def split_data(seq, num):
+    count, out = -1, []
+    while count < len(seq):
+        temp = []
+        for i in range(num):
+            count += 1
+            if count >= len(seq):
+                break
+            temp.append(seq[count])
+        out.append(temp)
+    return out
 
 
 class EmotionClassifier:
@@ -70,7 +83,7 @@ class EmotionClassifier:
         fc1 = tf.reshape(local2, [-1, weights['out'].get_shape().as_list()[0]])
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000):
+    def train(self, training_data, testing_data, epochs=50000, batch_size=10):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -78,7 +91,10 @@ class EmotionClassifier:
         :type testing_data: A list of tuples each containing a list of landmarks and a list of classifications.
         :param epochs: The number of cycles to train the classifier for. Default is 50000.
         :type epochs: int.
+        :param batch_size: The size of each batch to process.
+        :type batch_size: int.
         """
+        batches = split_data(training_data, batch_size)
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
         init, saver = tf.initialize_all_variables(), tf.train.Saver()
@@ -89,10 +105,11 @@ class EmotionClassifier:
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
             for epoch in range(epochs):
-                x, y = [m[0] for m in training_data], [n[1] for n in training_data]
-                _, avg_cost = sess.run([optimizer, cost], feed_dict={self.x: x, self.y: y})
-                if epoch % 5000 == 0:
-                    print "Epoch", '%04d' % (epoch), "cost = ", "{:.9f}".format(avg_cost)
+                for batch in batches:
+                    x, y = [m[0] for m in batch], [n[1] for n in batch]
+                    _, avg_cost = sess.run([optimizer, cost], feed_dict={self.x: x, self.y: y})
+                    if epoch % 100 == 0:
+                        print "Epoch", '%04d' % (epoch), "cost = ", "{:.9f}".format(avg_cost)
 
             print "Optimization Finished!"
             saver.save(sess, self.save_path) if self.save_path != '' else ''

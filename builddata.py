@@ -52,7 +52,8 @@ def get_data(input_dir):
     for label in os.listdir(input_dir):
         for image_file in os.listdir(input_dir + label):
             labels = numpy.zeros(8)
-            data.append((cv2.imread(input_dir + label + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels[label]))
+            labels[int(label)] = 1
+            data.append((cv2.imread(input_dir + label + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
     return data
 
 

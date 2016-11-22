@@ -9,7 +9,7 @@ def main():
         if mode == 'train':
             if len(sys.argv) > 4:
                 faces = builddata.get_data(sys.argv[2])
-                training_data, testing_data = emotionclassifier.split_data(faces)
+                training_data, testing_data = emotionclassifier.divide_data(faces)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
                 classifier = emotionclassifier.EmotionClassifier(8, sys.argv[3])
