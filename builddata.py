@@ -1,6 +1,7 @@
 import os
 import cv2
 import dlib
+import numpy
 
 
 def build_data(image_dir, label_dir, output_dir, itype='png'):
@@ -50,7 +51,8 @@ def get_data(input_dir):
     data = []
     for label in os.listdir(input_dir):
         for image_file in os.listdir(input_dir + label):
-            data.append((cv2.imread(input_dir + label + '/' + image_file, cv2.IMREAD_GRAYSCALE), label))
+            labels = numpy.zeros(8)
+            data.append((cv2.imread(input_dir + label + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels[label]))
     return data
 
 
