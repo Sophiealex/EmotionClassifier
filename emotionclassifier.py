@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 def divide_data(data, test_percent=0.2):
-    """ Splits input data into training and testing data.
+    """ Divides input data into training and testing data.
     :param data: A list to be split
     :type data: A list
     :param test_percent: The percentage for testing data. Default is 0.2.
@@ -21,6 +21,14 @@ def divide_data(data, test_percent=0.2):
 
 
 def split_data(seq, num):
+    """ Splits a list into a number of smaller list of a given size.
+    :param seq: The data to be split.
+    :type seq: list.
+    :param num: The size of each smaller list.
+    :type num: int.
+    :return: A list of contraing the split lists.
+    :rtype: list.
+    """
     count, out = -1, []
     while count < len(seq):
         temp = []
