@@ -67,8 +67,9 @@ def get_face(image_file):
     clahe = cv2.createCLAHE(2.0, (8, 8))
     image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
     detector = dlib.get_frontal_face_detector()
-    dets = detector(image, 1)
+    dets, data = detector(image, 1), []
     for _, d in enumerate(dets):
         left, right, top, bottom = d.left() - 20, d.right() + 20, d.top() - 20, d.bottom() + 20
         face = image[top:bottom, left:right]
-        return cv2.resize(face, (88, 88))
+        data.append(cv2.resize(face, (88, 88)))
+    return data
