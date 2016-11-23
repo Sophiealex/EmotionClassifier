@@ -59,13 +59,15 @@ class EmotionClassifier:
             'wc2': tf.Variable(tf.random_normal([5, 5, 64, 64])),
             'lc1': tf.Variable(tf.random_normal([3, 3, 64, 32])),
             'lc2': tf.Variable(tf.random_normal([3, 3, 32, 32])),
-            'out': tf.Variable(tf.random_normal([32, num_classes]))
+            'fc1': tf.Variable(tf.random_normal([22*22*32, 1024])),
+            'out': tf.Variable(tf.random_normal([1024, num_classes]))
         }
         biases = {
             'bc1': tf.Variable(tf.random_normal([64])),
             'bc2': tf.Variable(tf.random_normal([64])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
+            'fc1': tf.Variable(tf.random_normal([1024])),
             'out': tf.Variable(tf.random_normal([num_classes]))
         }
 
@@ -80,7 +82,12 @@ class EmotionClassifier:
         local2 = tf.nn.bias_add(tf.nn.conv2d(local1, weights['lc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl2'])
         local2 = tf.nn.dropout(local2, 0.5)
 
-        fc1 = tf.reshape(local2, [-1, weights['out'].get_shape().as_list()[0]])
+        shape = local2.get_shape().as_list()
+        print shape
+
+        fc1 = tf.reshape(local2, [-1, shape[1] * shape[2] * shape[3]])
+        fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
+        fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
     def train(self, training_data, testing_data, epochs=50000, batch_size=10):
@@ -98,18 +105,17 @@ class EmotionClassifier:
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
         init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
+        accuracy, avg_cost = tf.reduce_mean(tf.cast(correct_prediction, "float")), 0
 
         with tf.Session() as sess:
             sess.run(init)
-            correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
-            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-
             for epoch in range(epochs):
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
                     _, avg_cost = sess.run([optimizer, cost], feed_dict={self.x: x, self.y: y})
-                    if epoch % 100 == 0:
-                        print "Epoch", '%04d' % (epoch), "cost = ", "{:.9f}".format(avg_cost)
+                if epoch % 100 == 0:
+                    print "Epoch", '%04d' % epoch, "cost = ", "{:.9f}".format(avg_cost)
 
             print "Optimization Finished!"
             saver.save(sess, self.save_path) if self.save_path != '' else ''
