@@ -91,14 +91,12 @@ class EmotionClassifier:
         local2 = tf.nn.dropout(local2, 0.5)
 
         shape = local2.get_shape().as_list()
-        print shape
-
         fc1 = tf.reshape(local2, [-1, shape[1] * shape[2] * shape[3]])
         fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
         fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=10):
+    def train(self, training_data, testing_data, epochs=50000, batch_size=10, verbose=True):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -114,21 +112,21 @@ class EmotionClassifier:
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
         init, saver = tf.initialize_all_variables(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
-        accuracy, avg_cost = tf.reduce_mean(tf.cast(correct_prediction, "float")), 0
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 
         with tf.Session() as sess:
             sess.run(init)
             for epoch in range(epochs):
+                avg_acc = 0
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    _, avg_cost = sess.run([optimizer, cost], feed_dict={self.x: x, self.y: y})
-                if epoch % 100 == 0:
-                    print "Epoch", '%04d' % epoch, "cost = ", "{:.9f}".format(avg_cost)
+                    _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
+                    avg_acc += (acc / 10)
+                if epoch % 10 == 0 and verbose:
+                    print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc)
 
-            print "Optimization Finished!"
             saver.save(sess, self.save_path) if self.save_path != '' else ''
-            print "Accuracy:", accuracy.eval({self.x: [m[0] for m in testing_data],
-                                              self.y: [n[1] for n in testing_data]})
+            return accuracy.eval({self.x: [m[0] for m in testing_data], self.y: [n[1] for n in testing_data]})
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.

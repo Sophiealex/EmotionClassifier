@@ -14,10 +14,12 @@ def main():
                 training_data, testing_data = emotionclassifier.divide_data(faces)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
+
                 classifier = emotionclassifier.EmotionClassifier(8, sys.argv[3])
-                classifier.train(training_data, testing_data, int(sys.argv[4]))
+                accuracy = classifier.train(training_data, testing_data, int(sys.argv[4]))
                 end = time.clock()
-                print 'Training Time: ' + str(end - start) + 's'
+                print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
+                print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
             else:
                 print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Epochs\''
 
