@@ -58,6 +58,7 @@ def get_data(input_dir, num_classes):
             labels = numpy.zeros(num_classes)
             labels[int(label)] = 1
             data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
+        label += 1
     return data
 
 
