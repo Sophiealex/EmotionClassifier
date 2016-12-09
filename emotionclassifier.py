@@ -106,6 +106,8 @@ class EmotionClassifier:
         :type epochs: int.
         :param batch_size: The size of each batch to process.
         :type batch_size: int.
+        :param verbose: Sets the system into verbose mode. Default is True.
+        :type verbose: bool.
         """
         batches = split_data(training_data, batch_size)
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
@@ -120,9 +122,10 @@ class EmotionClassifier:
                 avg_acc = 0
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
-                    avg_acc += acc
-                if epoch % 10 == 0 and verbose:
+                    if len(x) != 0:
+                        _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
+                        avg_acc += (acc / batch_size)
+                if epoch % 1 == 0 and verbose:
                     print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc/batch_size)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
