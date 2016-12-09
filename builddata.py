@@ -27,6 +27,9 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
                             f = open(label_file, 'r')
                             label = int(float(f.readline()))
                             for image_file in os.listdir(image_dir + folder + '/' + inner_folder):
+                                print image_file + "\tCurrent count: " + str(count)
+                                if image_file.split('.')[1] != itype:
+                                    break
                                 image_file = image_dir + folder + '/' + inner_folder + '/' + image_file
                                 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
                                 image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
@@ -39,10 +42,11 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
                                     patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
                                                face[8:96, 8:96], face[4:92, 4:92]]
                                     for i in range(len(patches)):
-                                        cv2.imwrite(output_dir + str(label) + '/' + input_file[:-4] + str(i) + '.' +
-                                                    itype, patches[i])
-                                        print count
+                                        name = output_dir + str(label) + '/' + image_file[-21:-4] + str(count) + '.' + itype
+                                        print name
+                                        cv2.imwrite(name, patches[i])
                                         count += 1
+    return count
 
 
 def get_data(input_dir, num_classes):
@@ -58,6 +62,7 @@ def get_data(input_dir, num_classes):
             labels = numpy.zeros(num_classes)
             labels[int(label)] = 1
             data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
+        label += 1
     return data
 
 
