@@ -11,7 +11,7 @@ def main():
             if len(sys.argv) > 5:
                 start = time.clock()
                 faces = builddata.get_data(sys.argv[2], int(sys.argv[5]))
-                training_data, testing_data = emotionclassifier.divide_data(faces, 0.3)
+                training_data, testing_data = emotionclassifier.divide_data(faces, 0.2)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
 
@@ -37,9 +37,9 @@ def main():
         elif mode == 'build':
             if len(sys.argv) > 4:
                 start = time.clock()
-                builddata.build_data(sys.argv[2], sys.argv[3], sys.argv[4])
+                count = builddata.build_data(sys.argv[2], sys.argv[3], sys.argv[4])
                 end = time.clock()
-                print 'Augmented Dataset built in ' + str(end - start) + 's'
+                print 'Augmented Dataset built ' + str(count) + ' images in ' + str(end - start) + 's'
             else:
                 'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\''
 

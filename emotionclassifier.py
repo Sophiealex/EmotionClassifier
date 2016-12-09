@@ -64,15 +64,15 @@ class EmotionClassifier:
         """
         weights = {
             'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
-            'wc2': tf.Variable(tf.random_normal([5, 5, 64, 64])),
-            'lc1': tf.Variable(tf.random_normal([3, 3, 64, 32])),
-            'lc2': tf.Variable(tf.random_normal([3, 3, 32, 32])),
-            'fc1': tf.Variable(tf.random_normal([22*22*32, 1024])),
+            'wc2': tf.Variable(tf.random_normal([5, 5, 64, 32])),
+            'lc1': tf.Variable(tf.random_normal([3, 3, 32, 1])),
+            'lc2': tf.Variable(tf.random_normal([3, 3, 32, 1])),
+            'fc1': tf.Variable(tf.random_normal([15488, 1024])),
             'out': tf.Variable(tf.random_normal([1024, num_classes]))
         }
         biases = {
             'bc1': tf.Variable(tf.random_normal([64])),
-            'bc2': tf.Variable(tf.random_normal([64])),
+            'bc2': tf.Variable(tf.random_normal([32])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
             'fc1': tf.Variable(tf.random_normal([1024])),
@@ -80,14 +80,14 @@ class EmotionClassifier:
         }
 
         input = tf.reshape(self.x, shape=[-1, 88, 88, 1])
-        conv1 = tf.nn.bias_add(tf.nn.conv2d(input, weights['wc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bc1'])
-        conv1 = tf.nn.max_pool(conv1, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
-        conv2 = tf.nn.bias_add(tf.nn.conv2d(conv1, weights['wc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bc2'])
-        conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
+        conv1 = tf.nn.bias_add(tf.nn.conv2d(input, weights['wc1'], [1, 1, 1, 1], 'SAME'), biases['bc1'])
+        conv1 = tf.nn.max_pool(conv1, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
+        conv2 = tf.nn.bias_add(tf.nn.conv2d(conv1, weights['wc2'], [1, 1, 1, 1], 'SAME'), biases['bc2'])
+        conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
 
-        local1 = tf.nn.bias_add(tf.nn.conv2d(conv2, weights['lc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl1'])
+        local1 = tf.nn.bias_add(tf.nn.depthwise_conv2d(conv2, weights['lc1'], [1, 1, 1, 1], 'SAME'), biases['bl1'])
         local1 = tf.nn.dropout(local1, 0.5)
-        local2 = tf.nn.bias_add(tf.nn.conv2d(local1, weights['lc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl2'])
+        local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], [1, 1, 1, 1], 'SAME'), biases['bl2'])
         local2 = tf.nn.dropout(local2, 0.5)
 
         shape = local2.get_shape().as_list()
@@ -121,9 +121,9 @@ class EmotionClassifier:
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
                     _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
-                    avg_acc += (acc / 10)
+                    avg_acc += acc
                 if epoch % 10 == 0 and verbose:
-                    print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc)
+                    print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc/batch_size)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             return accuracy.eval({self.x: [m[0] for m in testing_data], self.y: [n[1] for n in testing_data]})
