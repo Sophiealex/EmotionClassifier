@@ -37,7 +37,8 @@ def split_data(seq, num):
             if count >= len(seq):
                 break
             temp.append(seq[count])
-        out.append(temp)
+        if len(temp) != 0:
+            out.append(temp)
     return out
 
 
@@ -96,7 +97,7 @@ class EmotionClassifier:
         fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=10, verbose=True):
+    def train(self, training_data, testing_data, epochs=50000, batch_size=10, intervals=10):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -106,8 +107,8 @@ class EmotionClassifier:
         :type epochs: int.
         :param batch_size: The size of each batch to process.
         :type batch_size: int.
-        :param verbose: Sets the system into verbose mode. Default is True.
-        :type verbose: bool.
+        :param intervals: The interval number to print epoch information. If set to 0 no print. Default is 10.
+        :type intervals: int.
         """
         batches = split_data(training_data, batch_size)
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
@@ -122,10 +123,9 @@ class EmotionClassifier:
                 avg_acc = 0
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    if len(x) != 0:
-                        _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
-                        avg_acc += (acc / batch_size)
-                if epoch % 1 == 0 and verbose:
+                    _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
+                    avg_acc += (acc / batch_size)
+                if epoch % intervals == 0 and intervals != 0:
                     print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc/batch_size)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
