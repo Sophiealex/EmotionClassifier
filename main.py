@@ -16,7 +16,7 @@ def main():
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
 
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[5]), sys.argv[3])
-                accuracy = classifier.train(training_data, testing_data, int(sys.argv[4]))
+                accuracy = classifier.train(training_data, testing_data, int(sys.argv[4]), intervals=1)
                 end = time.clock()
                 print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
