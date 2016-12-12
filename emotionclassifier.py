@@ -51,8 +51,9 @@ class EmotionClassifier:
         :param save_path: A file path for the session variables to be saved. If not set the session will not be saved.
         :type save_path: A file path.
         """
-        self.x = tf.placeholder("float", [None, 88, 88])
-        self.y = tf.placeholder("float", [None, num_classes])
+        self.x = tf.placeholder('float', [None, 88, 88])
+        self.y = tf.placeholder('float', [None, num_classes])
+        self.keep_prob = tf.placeholder(tf.float32)
         self.model = self.build_model(num_classes)
         self.save_path = save_path
 
@@ -87,9 +88,9 @@ class EmotionClassifier:
         conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
 
         local1 = tf.nn.bias_add(tf.nn.depthwise_conv2d(conv2, weights['lc1'], [1, 1, 1, 1], 'SAME'), biases['bl1'])
-        local1 = tf.nn.dropout(local1, 0.5)
+        local1 = tf.nn.dropout(local1, self.keep_prob)
         local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], [1, 1, 1, 1], 'SAME'), biases['bl2'])
-        local2 = tf.nn.dropout(local2, 0.5)
+        local2 = tf.nn.dropout(local2, self.keep_prob)
 
         shape = local2.get_shape().as_list()
         fc1 = tf.reshape(local2, [-1, shape[1] * shape[2] * shape[3]])
@@ -97,7 +98,7 @@ class EmotionClassifier:
         fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=10, intervals=10):
+    def train(self, training_data, testing_data, epochs=50000, batch_size=100, intervals=10):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -120,17 +121,26 @@ class EmotionClassifier:
         with tf.Session() as sess:
             sess.run(init)
             for epoch in range(epochs):
-                avg_acc = 0
                 for batch in batches:
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    _, acc = sess.run([optimizer, accuracy], feed_dict={self.x: x, self.y: y})
-                    avg_acc += (acc / batch_size)
+                    sess.run(optimizer, feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
                 if epoch % intervals == 0 and intervals != 0:
-                    print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc/batch_size)
+                    batch = random.choice(batches)
+                    x, y = [m[0] for m in batch], [n[1] for n in batch]
+                    loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
                     saver.save(sess, self.save_path) if self.save_path != '' else ''
+                    print 'Epoch', '%04d' % epoch, ' Loss = {:.6f}'.format(loss), \
+                        ' Training Accuracy = ', '{:.5f}'.format(acc)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
-            return accuracy.eval({self.x: [m[0] for m in testing_data], self.y: [n[1] for n in testing_data]})
+            batches = split_data(testing_data, batch_size)
+            avg_acc = 0
+            for batch in batches:
+                x, y = [m[0] for m in batch], [n[1] for n in batch]
+                acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
+                avg_acc = acc / len(batches)
+
+            return avg_acc
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.

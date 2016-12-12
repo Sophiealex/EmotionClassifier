@@ -13,7 +13,7 @@ def main():
             if len(sys.argv) > 5:
                 start = time.clock()
                 faces = builddata.get_data(sys.argv[2], int(sys.argv[5]))
-                training_data, testing_data = emotionclassifier.divide_data(faces, 0.2)
+                training_data, testing_data = emotionclassifier.divide_data(faces, 0.1)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
 
@@ -41,7 +41,7 @@ def main():
                 start = time.clock()
                 video = cv2.VideoCapture()
                 q = Queue.Queue(10)
-                while (True):
+                while True:
                     _, frame = video.read()
                     classifier = emotionclassifier.EmotionClassifier(sys.argv[1], sys.argv[2])
                     classification = classifier.classify(frame)
