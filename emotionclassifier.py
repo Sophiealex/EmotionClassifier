@@ -127,6 +127,7 @@ class EmotionClassifier:
                     avg_acc += (acc / batch_size)
                 if epoch % intervals == 0 and intervals != 0:
                     print 'Epoch', '%04d' % epoch, ' Training Accuracy = ', '{:.9f}'.format(avg_acc/batch_size)
+                    saver.save(sess, self.save_path) if self.save_path != '' else ''
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             return accuracy.eval({self.x: [m[0] for m in testing_data], self.y: [n[1] for n in testing_data]})
