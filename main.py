@@ -1,5 +1,7 @@
 import sys
+import cv2
 import time
+import Queue
 import builddata
 import emotionclassifier
 
@@ -24,15 +26,29 @@ def main():
                 print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Epochs\' \'Number of Classes\''
 
         elif mode == 'classify':
-            if len(sys.argv) > 3:
+            if len(sys.argv) > 4:
                 start = time.clock()
                 face = builddata.get_face(sys.argv[2])
-                classifier = emotionclassifier.EmotionClassifier(8, sys.argv[3])
+                classifier = emotionclassifier.EmotionClassifier(sys.argv[4], sys.argv[3])
                 classification = classifier.classify(face)
                 end = time.clock()
                 print sys.argv[2] + ' classified as type ' + str(classification[1]) + ' in ' + str(end - start) + 's'
             else:
-                print 'Please add \'Image Path\' \'Session Save Path\''
+                print 'Please add \'Image Path\' \'Session Save Path\' \'Number of Classes\''
+
+        elif mode == 'run':
+            if len(sys.argv) > 3:
+                start = time.clock()
+                video = cv2.VideoCapture()
+                q = Queue.Queue(10)
+                while (True):
+                    _, frame = video.read()
+                    classifier = emotionclassifier.EmotionClassifier(sys.argv[1], sys.argv[2])
+                    classification = classifier.classify(frame)
+                    q.put(classification)
+                    print classification
+            else:
+                print 'Please add \'Session Save Path\' \'Number of Classes\''
 
         elif mode == 'build':
             if len(sys.argv) > 4:
