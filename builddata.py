@@ -2,6 +2,7 @@ import os
 import cv2
 import dlib
 import numpy
+import random
 
 
 def build_data(image_dir, label_dir, output_dir, itype='png'):
@@ -42,11 +43,25 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
                                     patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
                                                face[8:96, 8:96], face[4:92, 4:92]]
                                     for i in range(len(patches)):
-                                        name = output_dir + str(label) + '/' + image_file[-21:-4] + str(count) + '.' + itype
+                                        name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
                                         print name
                                         cv2.imwrite(name, patches[i])
                                         count += 1
-    return count
+
+    minimum, num_files = 1000000, []
+    for folder in os.listdir(output_dir):
+        path = output_dir + '/' + folder
+        files = len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])
+        num_files.append([files, path])
+        if num_files < minimum:
+            minimum = num_files
+
+    for i in range(len(num_files)):
+        while num_files[i][0] > minimum:
+            os.remove(random.choice(os.listdir(num_files[i][1])))
+            num_files[i][0] -= 1
+
+    return minimum * len(num_files)
 
 
 def get_data(input_dir, num_classes):
