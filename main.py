@@ -59,8 +59,16 @@ def main():
                 end = time.clock()
                 print 'Augmented Dataset built ' + str(count) + ' images in ' + str(end - start) + 's'
             else:
-                'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\''
+                print 'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\''
 
+        elif mode == 'normalize':
+            if len(sys.argv) > 2:
+                start = time.clock()
+                count = builddata.normalize(sys.argv[2])
+                end = time.clock()
+                print 'Normalized Dataset ' + str(count) + ' images in ' + str(end - start) + 's'
+            else:
+                print 'Please add \'Image Dir\''
         else:
             print 'Please add either \'train\', \'classify\' or \'build\' as command line arguments.'
 

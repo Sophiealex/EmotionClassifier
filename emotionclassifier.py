@@ -127,7 +127,8 @@ class EmotionClassifier:
             for epoch in range(epochs):
                 for i in range(len(batches)):
                     x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
-                    _, summary = sess.run([optimizer, merged_summary_op], feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
+                    _, summary = sess.run([optimizer, merged_summary_op],
+                                          feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
                     summary_writer.add_summary(summary, epoch * len(batches) + i)
                 if epoch % intervals == 0 and intervals != 0:
                     batch = random.choice(batches)
