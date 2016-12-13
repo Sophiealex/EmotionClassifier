@@ -73,7 +73,7 @@ def get_face(image_file):
     :return: A normalised image of the face from the inputted image.
     :rtype: image
     """
-    clahe = cv2.createCLAHE(2.0, (8, 8))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
     detector = dlib.get_frontal_face_detector()
     dets, data = detector(image, 1), []

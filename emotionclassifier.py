@@ -92,8 +92,7 @@ class EmotionClassifier:
         local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], [1, 1, 1, 1], 'SAME'), biases['bl2'])
         local2 = tf.nn.dropout(local2, self.keep_prob)
 
-        shape = local2.get_shape().as_list()
-        fc1 = tf.reshape(local2, [-1, shape[1] * shape[2] * shape[3]])
+        fc1 = tf.reshape(local2, [-1, 15488])
         fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
         fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
@@ -118,12 +117,18 @@ class EmotionClassifier:
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 
+        tf.scalar_summary("loss", cost)
+        tf.scalar_summary("accuracy", accuracy)
+        merged_summary_op = tf.merge_all_summaries()
+
         with tf.Session() as sess:
             sess.run(init)
+            summary_writer = tf.train.SummaryWriter('Resources/logs', graph=tf.get_default_graph())
             for epoch in range(epochs):
-                for batch in batches:
-                    x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    sess.run(optimizer, feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
+                for i in range(len(batches)):
+                    x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
+                    _, summary = sess.run([optimizer, merged_summary_op], feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
+                    summary_writer.add_summary(summary, epoch * len(batches) + i)
                 if epoch % intervals == 0 and intervals != 0:
                     batch = random.choice(batches)
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
@@ -153,5 +158,4 @@ class EmotionClassifier:
         with tf.Session() as sess:
             sess.run(init)
             saver.restore(sess, self.save_path)
-            classification = np.asarray(sess.run(self.model, feed_dict={self.x: data}))
-            return np.unravel_index(classification.argmax(), classification.shape)
+            return np.asarray(sess.run(self.model, feed_dict={self.x: data, self.keep_prob: 1.}))

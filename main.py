@@ -2,6 +2,7 @@ import sys
 import cv2
 import time
 import Queue
+import numpy
 import builddata
 import emotionclassifier
 
@@ -18,7 +19,7 @@ def main():
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
 
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[5]), sys.argv[3])
-                accuracy = classifier.train(training_data, testing_data, int(sys.argv[4]), intervals=1)
+                accuracy = classifier.train(training_data, testing_data, epochs=int(sys.argv[4]), intervals=1)
                 end = time.clock()
                 print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
@@ -29,10 +30,11 @@ def main():
             if len(sys.argv) > 4:
                 start = time.clock()
                 face = builddata.get_face(sys.argv[2])
-                classifier = emotionclassifier.EmotionClassifier(sys.argv[4], sys.argv[3])
+                classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
                 classification = classifier.classify(face)
                 end = time.clock()
-                print sys.argv[2] + ' classified as type ' + str(classification[1]) + ' in ' + str(end - start) + 's'
+                print sys.argv[2]+' classified as type '+str(numpy.argmax(classification[0])+1)+' in '+str(end-start)+'s'
+                print classification[0]
             else:
                 print 'Please add \'Image Path\' \'Session Save Path\' \'Number of Classes\''
 
@@ -43,7 +45,7 @@ def main():
                 q = Queue.Queue(10)
                 while True:
                     _, frame = video.read()
-                    classifier = emotionclassifier.EmotionClassifier(sys.argv[1], sys.argv[2])
+                    classifier = emotionclassifier.EmotionClassifier(sys.argv[2], sys.argv[1])
                     classification = classifier.classify(frame)
                     q.put(classification)
                     print classification
