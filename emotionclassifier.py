@@ -64,7 +64,7 @@ class EmotionClassifier:
         :return: The Neural model for the system.
         :rtype: A TensorFlow model.
         """
-        weights = {
+        weightsa = {
             'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
             'wc2': tf.Variable(tf.random_normal([5, 5, 64, 32])),
             'lc1': tf.Variable(tf.random_normal([3, 3, 32, 1])),
@@ -72,9 +72,26 @@ class EmotionClassifier:
             'fc1': tf.Variable(tf.random_normal([15488, 1024])),
             'out': tf.Variable(tf.random_normal([1024, num_classes]))
         }
-        biases = {
+        biasesa = {
             'bc1': tf.Variable(tf.random_normal([64])),
             'bc2': tf.Variable(tf.random_normal([32])),
+            'bl1': tf.Variable(tf.random_normal([32])),
+            'bl2': tf.Variable(tf.random_normal([32])),
+            'fc1': tf.Variable(tf.random_normal([1024])),
+            'out': tf.Variable(tf.random_normal([num_classes]))
+        }
+
+        weights = {
+            'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
+            'wc2': tf.Variable(tf.random_normal([5, 5, 64, 64])),
+            'lc1': tf.Variable(tf.random_normal([3, 3, 64, 32])),
+            'lc2': tf.Variable(tf.random_normal([3, 3, 32, 32])),
+            'fc1': tf.Variable(tf.random_normal([22 * 22 * 32, 1024])),
+            'out': tf.Variable(tf.random_normal([1024, num_classes]))
+        }
+        biases = {
+            'bc1': tf.Variable(tf.random_normal([64])),
+            'bc2': tf.Variable(tf.random_normal([64])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
             'fc1': tf.Variable(tf.random_normal([1024])),
@@ -87,9 +104,16 @@ class EmotionClassifier:
         conv2 = tf.nn.bias_add(tf.nn.conv2d(conv1, weights['wc2'], [1, 1, 1, 1], 'SAME'), biases['bc2'])
         conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
 
+        """
         local1 = tf.nn.bias_add(tf.nn.depthwise_conv2d(conv2, weights['lc1'], [1, 1, 1, 1], 'SAME'), biases['bl1'])
         local1 = tf.nn.dropout(local1, self.keep_prob)
         local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], [1, 1, 1, 1], 'SAME'), biases['bl2'])
+        local2 = tf.nn.dropout(local2, self.keep_prob)
+        """
+
+        local1 = tf.nn.bias_add(tf.nn.conv2d(conv2, weights['lc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl1'])
+        local1 = tf.nn.dropout(local1, self.keep_prob)
+        local2 = tf.nn.bias_add(tf.nn.conv2d(local1, weights['lc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl2'])
         local2 = tf.nn.dropout(local2, self.keep_prob)
 
         fc1 = tf.reshape(local2, [-1, 15488])
@@ -147,6 +171,23 @@ class EmotionClassifier:
                 avg_acc = acc / len(batches)
 
             return avg_acc
+
+    def accuracy(self, testing_data, batch_size=100):
+        init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
+        with tf.Session() as sess:
+            sess.run(init)
+            saver.restore(sess, self.save_path)
+
+            batches = split_data(testing_data, batch_size)
+            avg_acc = 0
+            for batch in batches:
+                x, y = [m[0] for m in batch], [n[1] for n in batch]
+                acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
+                avg_acc = acc / len(batches)
+            return avg_acc
+
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.

@@ -8,6 +8,7 @@ import emotionclassifier
 
 
 def main():
+    print sys.argv
     if len(sys.argv) >= 2:
         mode = sys.argv[1]
         if mode == 'train':
@@ -25,6 +26,20 @@ def main():
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
             else:
                 print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Epochs\' \'Number of Classes\''
+
+        elif mode == 'accuracy':
+            if len(sys.argv) > 4:
+                start = time.clock()
+                faces = builddata.get_data(sys.argv[2], int(sys.argv[4]))
+                _, testing_data = emotionclassifier.divide_data(faces, 0.1)
+                print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
+
+                classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
+                accuracy = classifier.accuracy(testing_data)
+                end = time.clock()
+                print 'Accuracy: ' + str(accuracy) + ' in ' + str(end - start) + 's'
+            else:
+                print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Classes\''
 
         elif mode == 'classify':
             if len(sys.argv) > 4:
