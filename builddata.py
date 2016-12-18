@@ -50,6 +50,12 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
 
 
 def normalize(output_dir):
+    """ Normalize the data in the directory.
+    :param output_dir: The directory to normalize.
+    :type output_dir: str
+    :return: The number of files in each folder.
+    :rtype: int
+    """
     minimum, num_files = 1000000, []
     for folder in os.listdir(output_dir):
         path = output_dir + folder
