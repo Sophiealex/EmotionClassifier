@@ -155,12 +155,13 @@ class EmotionClassifier:
                                           feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
                     summary_writer.add_summary(summary, epoch * len(batches) + i)
                 if epoch % intervals == 0 and intervals != 0:
-                    batch = random.choice(batches)
-                    x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
+                    #batch = random.choice(batches)
+                    #x, y = [m[0] for m in batch], [n[1] for n in batch]
+                    #loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
                     saver.save(sess, self.save_path) if self.save_path != '' else ''
-                    print 'Epoch', '%04d' % epoch, ' Loss = {:.6f}'.format(loss), \
-                        ' Training Accuracy = ', '{:.5f}'.format(acc)
+                    print 'Epoch', '%04d' % epoch
+                    #, ' Loss = {:.6f}'.format(loss), \
+                        #' Training Accuracy = ', '{:.5f}'.format(acc)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
