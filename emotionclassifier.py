@@ -121,7 +121,7 @@ class EmotionClassifier:
         fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=100, intervals=10):
+    def train(self, training_data, testing_data, epochs=50000, batch_size=100, intervals=1):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -137,17 +137,17 @@ class EmotionClassifier:
         batches = split_data(training_data, batch_size)
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
-        init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 
-        tf.scalar_summary("loss", cost)
-        tf.scalar_summary("accuracy", accuracy)
-        merged_summary_op = tf.merge_all_summaries()
+        tf.summary.scalar('loss', cost)
+        tf.summary.scalar('accuracy', accuracy)
+        merged_summary_op = tf.summary.merge_all()
 
         with tf.Session() as sess:
             sess.run(init)
-            summary_writer = tf.train.SummaryWriter('Resources/logs', graph=tf.get_default_graph())
+            summary_writer = tf.summary.FileWriter('Resources/logs', graph=tf.get_default_graph())
             for epoch in range(epochs):
                 for i in range(len(batches)):
                     x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
