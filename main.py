@@ -8,7 +8,6 @@ import emotionclassifier
 
 
 def main():
-    print sys.argv
     if len(sys.argv) >= 2:
         mode = sys.argv[1]
         if mode == 'train':
@@ -48,7 +47,7 @@ def main():
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
                 classification = classifier.classify(face)
                 end = time.clock()
-                print sys.argv[2]+' classified as '+str(numpy.argmax(classification[0])+1)+' in '+str(end-start)+'s'
+                print sys.argv[2]+' classified as '+str(numpy.argmax(classification[0]))+' in '+str(end-start)+'s'
                 print classification[0]
             else:
                 print 'Please add \'Image Path\' \'Session Save Path\' \'Number of Classes\''
