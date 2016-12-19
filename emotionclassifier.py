@@ -152,6 +152,14 @@ class EmotionClassifier:
             return avg_acc
 
     def accuracy(self, testing_data, batch_size=100):
+        """ Finds the accuracy of a model.
+        :param testing_data: A list of tuples used for testing the classifier.
+        :type testing_data: A list of tuples each containing a list of landmarks and a list of classifications.
+        :param batch_size: The size for each batch.
+        :type batch_size: int
+        :return: The accuracy from the program
+        :rtype: double
+        """
         init, saver = tf.initialize_all_variables(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
