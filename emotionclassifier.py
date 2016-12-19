@@ -175,7 +175,6 @@ class EmotionClassifier:
                 avg_acc += acc / len(batches)
             return avg_acc
 
-
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.
         :param data: The data that is to be classified.
