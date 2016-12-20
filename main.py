@@ -1,7 +1,6 @@
 import sys
 import cv2
 import time
-import Queue
 import numpy
 import builddata
 import emotionclassifier
@@ -56,13 +55,24 @@ def main():
             if len(sys.argv) > 3:
                 start = time.clock()
                 video = cv2.VideoCapture()
-                q = Queue.Queue(10)
-                while True:
+                q = []
+                while cv2.waitKey(0):
+                    average = []
                     _, frame = video.read()
                     classifier = emotionclassifier.EmotionClassifier(sys.argv[2], sys.argv[1])
                     classification = classifier.classify(frame)
-                    q.put(classification)
-                    print classification
+                    if len(q) < 10:
+                        q.append(classification)
+                    else:
+                        q.remove(0)
+                        q.append(classification)
+                        for i in range(len(q)):
+                            classification_average = 0
+                            for j in range(len(q[0])):
+                                classification_average += q[i][j]/len(q[0])
+                            average.append(classification_average)
+                    print average
+
             else:
                 print 'Please add \'Session Save Path\' \'Number of Classes\''
 
