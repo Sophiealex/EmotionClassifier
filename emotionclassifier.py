@@ -135,10 +135,10 @@ class EmotionClassifier:
                     avg_loss += loss
                     avg_acc += acc
                     summary_writer.add_summary(summary, epoch * len(batches) + i)
-                    if epoch % intervals == 0 and intervals != 0 and i == len(batches):
+                    if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
                         saver.save(sess, self.save_path) if self.save_path != '' else ''
                         end = time.time()
-                        print 'Epoch', '%04d' % epoch,' Loss = {:.5f}'.format(avg_loss / i),\
+                        print 'Epoch', '%03d' % epoch,' Loss = {:.5f}'.format(avg_loss / i),\
                             ' Accuracy = {:.5f}'.format(avg_acc / i), ' Time = {:.2f}'.format(end - start)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
