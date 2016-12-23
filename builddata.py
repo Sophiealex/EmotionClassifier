@@ -23,29 +23,30 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
             for inner_folder in os.listdir(image_dir + folder):
                 if os.path.isdir(image_dir + folder + '/' + inner_folder):
                     for input_file in os.listdir(image_dir + folder + '/' + inner_folder):
+                        if input_file.split('.')[1] != itype:
+                            break
                         label_file = label_dir + folder + '/' + inner_folder + '/' + input_file[:-4] + '_emotion.txt'
                         if os.path.isfile(label_file):
                             f = open(label_file, 'r')
                             label = int(float(f.readline()))
-                            for image_file in os.listdir(image_dir + folder + '/' + inner_folder):
-                                print image_file + "\tCurrent count: " + str(count)
-                                if image_file.split('.')[1] != itype:
-                                    break
-                                image_file = image_dir + folder + '/' + inner_folder + '/' + image_file
-                                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                                image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
-                                detector = dlib.get_frontal_face_detector()
-                                detections = detector(image, 1)
-                                for _, d in enumerate(detections):
-                                    left, right, top, bottom = d.left()-20, d.right()+20, d.top()-20, d.bottom()+20
-                                    face = image[top:bottom, left:right]
-                                    face = cv2.resize(face, (96, 96))
-                                    patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
-                                               face[8:96, 8:96], face[4:92, 4:92]]
-                                    for i in range(len(patches)):
-                                        name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
-                                        cv2.imwrite(name, patches[i])
-                                        count += 1
+                            print input_file + "\tCurrent count: " + str(count)
+                            image_file = image_dir + folder + '/' + inner_folder + '/' + input_file
+                            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                            image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
+                            detector = dlib.get_frontal_face_detector()
+                            detections = detector(image, 1)
+                            for _, d in enumerate(detections):
+                                left, right, top, bottom = d.left()-20, d.right()+20, d.top()-20, d.bottom()+20
+                                face = image[top:bottom, left:right]
+                                face = cv2.resize(face, (96, 96))
+                                patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
+                                           face[8:96, 8:96], face[4:92, 4:92]]
+                                for i in range(len(patches)):
+                                    name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
+                                    cv2.imwrite(name, patches[i])
+                                    name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count + 1)+'.'+itype
+                                    cv2.imwrite(name, cv2.flip(patches[i], 0))
+                                    count += 2
     return count
 
 

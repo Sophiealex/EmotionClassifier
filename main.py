@@ -72,6 +72,7 @@ def main():
                                 classification_average += q[i][j]/len(q[0])
                             average.append(classification_average)
                     print average
+                end = time.clock()
 
             else:
                 print 'Please add \'Session Save Path\' \'Number of Classes\''

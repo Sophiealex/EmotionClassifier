@@ -95,10 +95,10 @@ class EmotionClassifier:
 
         fc1 = tf.reshape(local2, [-1, 15488])
         fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
-        fc1 = tf.nn.relu(fc1)
+        # fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=100, intervals=1):
+    def train(self, training_data, testing_data, epochs=5000, batch_size=128, intervals=1):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -111,10 +111,10 @@ class EmotionClassifier:
         :param intervals: The interval number to print epoch information. If set to 0 no print. Default is 10.
         :type intervals: int.
         """
-        start = time.time()
+        start = time.clock()
         batches = split_data(training_data, batch_size)
-        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+        cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.model, self.y))
+        optimizer = tf.train.AdamOptimizer().minimize(cost)
         init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
@@ -131,15 +131,15 @@ class EmotionClassifier:
                 for i in range(len(batches)):
                     x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
                     _, loss, acc, summary = sess.run([optimizer, cost, accuracy, merged_summary_op],
-                                                     feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
+                                                     feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
                     avg_loss += loss
                     avg_acc += acc
                     summary_writer.add_summary(summary, epoch * len(batches) + i)
                     if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
                         saver.save(sess, self.save_path) if self.save_path != '' else ''
-                        end = time.time()
-                        print 'Epoch', '%03d' % epoch,' Loss = {:.5f}'.format(avg_loss / i),\
-                            ' Accuracy = {:.5f}'.format(avg_acc / i), ' Time = {:.2f}'.format(end - start)
+                        end = time.clock()
+                        print 'Epoch', '%03d' % epoch, ' Time = {:.2f}'.format(end - start),\
+                              ' Accuracy = {:.5f}'.format(avg_acc / i), ' Loss = {:.5f}'.format(avg_loss / i)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
