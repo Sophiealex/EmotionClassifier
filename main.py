@@ -1,14 +1,12 @@
 import sys
 import cv2
 import time
-import Queue
 import numpy
 import builddata
 import emotionclassifier
 
 
 def main():
-    print sys.argv
     if len(sys.argv) >= 2:
         mode = sys.argv[1]
         if mode == 'train':
@@ -48,7 +46,7 @@ def main():
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
                 classification = classifier.classify(face)
                 end = time.clock()
-                print sys.argv[2]+' classified as '+str(numpy.argmax(classification[0])+1)+' in '+str(end-start)+'s'
+                print sys.argv[2]+' classified as '+str(numpy.argmax(classification[0]))+' in '+str(end-start)+'s'
                 print classification[0]
             else:
                 print 'Please add \'Image Path\' \'Session Save Path\' \'Number of Classes\''
@@ -57,13 +55,25 @@ def main():
             if len(sys.argv) > 3:
                 start = time.clock()
                 video = cv2.VideoCapture()
-                q = Queue.Queue(10)
-                while True:
+                q = []
+                while cv2.waitKey(0):
+                    average = []
                     _, frame = video.read()
                     classifier = emotionclassifier.EmotionClassifier(sys.argv[2], sys.argv[1])
                     classification = classifier.classify(frame)
-                    q.put(classification)
-                    print classification
+                    if len(q) < 10:
+                        q.append(classification)
+                    else:
+                        q.remove(0)
+                        q.append(classification)
+                        for i in range(len(q)):
+                            classification_average = 0
+                            for j in range(len(q[0])):
+                                classification_average += q[i][j]/len(q[0])
+                            average.append(classification_average)
+                    print average
+                end = time.clock()
+
             else:
                 print 'Please add \'Session Save Path\' \'Number of Classes\''
 

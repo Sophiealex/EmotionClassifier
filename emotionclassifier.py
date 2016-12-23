@@ -1,3 +1,4 @@
+import time
 import random
 import numpy as np
 import tensorflow as tf
@@ -64,7 +65,7 @@ class EmotionClassifier:
         :return: The Neural model for the system.
         :rtype: A TensorFlow model.
         """
-        weightsa = {
+        weights = {
             'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
             'wc2': tf.Variable(tf.random_normal([5, 5, 64, 32])),
             'lc1': tf.Variable(tf.random_normal([3, 3, 32, 1])),
@@ -72,26 +73,9 @@ class EmotionClassifier:
             'fc1': tf.Variable(tf.random_normal([15488, 1024])),
             'out': tf.Variable(tf.random_normal([1024, num_classes]))
         }
-        biasesa = {
-            'bc1': tf.Variable(tf.random_normal([64])),
-            'bc2': tf.Variable(tf.random_normal([32])),
-            'bl1': tf.Variable(tf.random_normal([32])),
-            'bl2': tf.Variable(tf.random_normal([32])),
-            'fc1': tf.Variable(tf.random_normal([1024])),
-            'out': tf.Variable(tf.random_normal([num_classes]))
-        }
-
-        weights = {
-            'wc1': tf.Variable(tf.random_normal([5, 5, 1, 64])),
-            'wc2': tf.Variable(tf.random_normal([5, 5, 64, 64])),
-            'lc1': tf.Variable(tf.random_normal([3, 3, 64, 32])),
-            'lc2': tf.Variable(tf.random_normal([3, 3, 32, 32])),
-            'fc1': tf.Variable(tf.random_normal([22 * 22 * 32, 1024])),
-            'out': tf.Variable(tf.random_normal([1024, num_classes]))
-        }
         biases = {
             'bc1': tf.Variable(tf.random_normal([64])),
-            'bc2': tf.Variable(tf.random_normal([64])),
+            'bc2': tf.Variable(tf.random_normal([32])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
             'fc1': tf.Variable(tf.random_normal([1024])),
@@ -104,24 +88,17 @@ class EmotionClassifier:
         conv2 = tf.nn.bias_add(tf.nn.conv2d(conv1, weights['wc2'], [1, 1, 1, 1], 'SAME'), biases['bc2'])
         conv2 = tf.nn.max_pool(conv2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
 
-        """
         local1 = tf.nn.bias_add(tf.nn.depthwise_conv2d(conv2, weights['lc1'], [1, 1, 1, 1], 'SAME'), biases['bl1'])
         local1 = tf.nn.dropout(local1, self.keep_prob)
         local2 = tf.nn.bias_add(tf.nn.depthwise_conv2d(local1, weights['lc2'], [1, 1, 1, 1], 'SAME'), biases['bl2'])
         local2 = tf.nn.dropout(local2, self.keep_prob)
-        """
-
-        local1 = tf.nn.bias_add(tf.nn.conv2d(conv2, weights['lc1'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl1'])
-        local1 = tf.nn.dropout(local1, self.keep_prob)
-        local2 = tf.nn.bias_add(tf.nn.conv2d(local1, weights['lc2'], strides=[1, 1, 1, 1], padding='SAME'), biases['bl2'])
-        local2 = tf.nn.dropout(local2, self.keep_prob)
 
         fc1 = tf.reshape(local2, [-1, 15488])
         fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
-        fc1 = tf.nn.relu(fc1)
+        # fc1 = tf.nn.relu(fc1)
         return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-    def train(self, training_data, testing_data, epochs=50000, batch_size=100, intervals=10):
+    def train(self, training_data, testing_data, epochs=5000, batch_size=128, intervals=1):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -134,33 +111,35 @@ class EmotionClassifier:
         :param intervals: The interval number to print epoch information. If set to 0 no print. Default is 10.
         :type intervals: int.
         """
+        start = time.clock()
         batches = split_data(training_data, batch_size)
-        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
-        init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.model, self.y))
+        optimizer = tf.train.AdamOptimizer().minimize(cost)
+        init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 
-        tf.scalar_summary("loss", cost)
-        tf.scalar_summary("accuracy", accuracy)
-        merged_summary_op = tf.merge_all_summaries()
+        tf.summary.scalar('loss', cost)
+        tf.summary.scalar('accuracy', accuracy)
+        merged_summary_op = tf.summary.merge_all()
 
         with tf.Session() as sess:
             sess.run(init)
-            summary_writer = tf.train.SummaryWriter('Resources/logs', graph=tf.get_default_graph())
+            summary_writer = tf.summary.FileWriter('Resources/logs', graph=tf.get_default_graph())
             for epoch in range(epochs):
+                avg_loss, avg_acc = 0, 0
                 for i in range(len(batches)):
                     x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
-                    _, summary = sess.run([optimizer, merged_summary_op],
-                                          feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
+                    _, loss, acc, summary = sess.run([optimizer, cost, accuracy, merged_summary_op],
+                                                     feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
+                    avg_loss += loss
+                    avg_acc += acc
                     summary_writer.add_summary(summary, epoch * len(batches) + i)
-                if epoch % intervals == 0 and intervals != 0:
-                    batch = random.choice(batches)
-                    x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
-                    saver.save(sess, self.save_path) if self.save_path != '' else ''
-                    print 'Epoch', '%04d' % epoch, ' Loss = {:.6f}'.format(loss), \
-                        ' Training Accuracy = ', '{:.5f}'.format(acc)
+                    if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
+                        saver.save(sess, self.save_path) if self.save_path != '' else ''
+                        end = time.clock()
+                        print 'Epoch', '%03d' % epoch, ' Time = {:.2f}'.format(end - start),\
+                              ' Accuracy = {:.5f}'.format(avg_acc / i), ' Loss = {:.5f}'.format(avg_loss / i)
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
@@ -168,11 +147,19 @@ class EmotionClassifier:
             for batch in batches:
                 x, y = [m[0] for m in batch], [n[1] for n in batch]
                 acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
-                avg_acc = acc / len(batches)
+                avg_acc += acc / len(batches)
 
             return avg_acc
 
     def accuracy(self, testing_data, batch_size=100):
+        """ Finds the accuracy of a model.
+        :param testing_data: A list of tuples used for testing the classifier.
+        :type testing_data: A list of tuples each containing a list of landmarks and a list of classifications.
+        :param batch_size: The size for each batch.
+        :type batch_size: int
+        :return: The accuracy from the program
+        :rtype: double
+        """
         init, saver = tf.initialize_all_variables(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
@@ -186,13 +173,9 @@ class EmotionClassifier:
             for batch in batches:
                 x, y = [m[0] for m in batch], [n[1] for n in batch]
                 acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
-                avg_acc = acc / len(batches)
+                avg_acc += acc / len(batches)
             return avg_acc
             """
-
-            x, y = [m[0] for m in testing_data], [n[1] for n in testing_data]
-            acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
-            return acc
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.
