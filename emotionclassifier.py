@@ -157,7 +157,7 @@ class EmotionClassifier:
                 if epoch % intervals == 0 and intervals != 0:
                     batch = random.choice(batches)
                     x, y = [m[0] for m in batch], [n[1] for n in batch]
-                    loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
+                    loss, acc = sess.run([cost, accuracy], feed_dict={self.x: x, self.y: y, self.keep_prob: 0.5})
                     saver.save(sess, self.save_path) if self.save_path != '' else ''
                     print 'Epoch', '%04d' % epoch, ' Loss = {:.6f}'.format(loss), \
                         ' Training Accuracy = ', '{:.5f}'.format(acc)
@@ -180,6 +180,7 @@ class EmotionClassifier:
             sess.run(init)
             saver.restore(sess, self.save_path)
 
+            """
             batches = split_data(testing_data, batch_size)
             avg_acc = 0
             for batch in batches:
@@ -187,7 +188,11 @@ class EmotionClassifier:
                 acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
                 avg_acc = acc / len(batches)
             return avg_acc
+            """
 
+            x, y = [m[0] for m in testing_data], [n[1] for n in testing_data]
+            acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
+            return acc
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.
