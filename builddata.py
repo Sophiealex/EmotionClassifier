@@ -45,7 +45,7 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
                                     name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
                                     cv2.imwrite(name, patches[i])
                                     name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count + 1)+'.'+itype
-                                    cv2.imwrite(name, cv2.flip(patches[i], 0))
+                                    cv2.imwrite(name, cv2.flip(patches[i], 1))
                                     count += 2
     return count
 
