@@ -160,7 +160,7 @@ class EmotionClassifier:
         :return: The accuracy from the program
         :rtype: double
         """
-        init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
         with tf.Session() as sess:
@@ -182,7 +182,7 @@ class EmotionClassifier:
         :return: A classification.
         :rtype: int.
         """
-        init, saver = tf.initialize_all_variables(), tf.train.Saver()
+        init, saver = tf.global_variables_initializer(), tf.train.Saver()
         with tf.Session() as sess:
             sess.run(init)
             saver.restore(sess, self.save_path)

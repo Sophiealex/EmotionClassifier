@@ -53,26 +53,31 @@ def main():
 
         elif mode == 'run':
             if len(sys.argv) > 3:
-                start = time.clock()
-                video = cv2.VideoCapture()
-                q = []
-                while cv2.waitKey(0):
-                    average = []
-                    _, frame = video.read()
-                    classifier = emotionclassifier.EmotionClassifier(sys.argv[2], sys.argv[1])
-                    classification = classifier.classify(frame)
-                    if len(q) < 10:
-                        q.append(classification)
-                    else:
-                        q.remove(0)
-                        q.append(classification)
-                        for i in range(len(q)):
-                            classification_average = 0
-                            for j in range(len(q[0])):
-                                classification_average += q[i][j]/len(q[0])
-                            average.append(classification_average)
-                    print average
-                end = time.clock()
+                start, video, q, count = time.clock(), cv2.VideoCapture(0), [], 0
+                classifier = emotionclassifier.EmotionClassifier(int(sys.argv[3]), sys.argv[2])
+                if (video.isOpened()):
+                    while True:
+                        average = []
+                        _, frame = video.read()
+                        face = builddata.get_face_from_frame(frame)
+                        if face != 0:
+                            print 'Found Face'
+                            classification = classifier.classify(face)
+                            if len(q) < 10:
+                                q.append(classification)
+                            else:
+                                q.remove(0)
+                                q.append(classification)
+                                for i in range(len(q)):
+                                    classification_average = 0
+                                    for j in range(len(q[0])):
+                                        classification_average += q[i][j]/len(q[0])
+                                    average.append(classification_average)
+                                print average
+                        count += 1
+                        print count
+                else:
+                    print 'No Camera'
 
             else:
                 print 'Please add \'Session Save Path\' \'Number of Classes\''
