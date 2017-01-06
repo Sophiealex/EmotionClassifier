@@ -2,6 +2,7 @@ import sys
 import cv2
 import time
 import numpy
+import select
 import builddata
 import emotionclassifier
 
@@ -76,7 +77,8 @@ def main():
                                 print average
                         count += 1
                         print count
-                        if cv2.waitKey(5):
+                        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                            line = raw_input()
                             break
                 else:
                     print 'No Camera'
