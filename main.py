@@ -55,7 +55,7 @@ def main():
             if len(sys.argv) > 3:
                 start, video, q, count = time.clock(), cv2.VideoCapture(0), [], 0
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[3]), sys.argv[2])
-                if (video.isOpened()):
+                if video.grab():
                     while True:
                         average = []
                         _, frame = video.read()
@@ -76,6 +76,8 @@ def main():
                                 print average
                         count += 1
                         print count
+                        if cv2.waitKey(5):
+                            break
                 else:
                     print 'No Camera'
 
