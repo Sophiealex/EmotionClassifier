@@ -109,5 +109,19 @@ def main():
 		print 'Please add either \'train\', \'classify\' or \'build\' as command line arguments.'
 
 
+def get_address_from_config(config_file):
+	try:
+		with open(config_file, 'r') as file:
+			for line in file.readlines():
+				line.strip()
+				if line and len(line) > 0:
+					pair = line.split("=")
+					if pair[0] == 'EmotionAddress':
+						return pair[1]
+		return 0
+	except IOError as err:
+		print err.message
+
+
 if __name__ == '__main__':
 	main()
