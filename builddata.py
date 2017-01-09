@@ -45,7 +45,7 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
                                     name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
                                     cv2.imwrite(name, patches[i])
                                     name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count + 1)+'.'+itype
-                                    cv2.imwrite(name, cv2.flip(patches[i], 0))
+                                    cv2.imwrite(name, cv2.flip(patches[i], 1))
                                     count += 2
     return count
 
@@ -93,7 +93,26 @@ def get_data(input_dir, num_classes):
     return data
 
 
-def get_face(image_file):
+def get_face(image):
+    """ Gets a normalised image from a image.
+    :param image: A image to be processed.
+    :type image: OpenCV image
+    :return: A normalised image of the face from the inputted image.
+    :rtype: image
+    """
+    try:
+        detector = dlib.get_frontal_face_detector()
+        dets, data = detector(image, 1), []
+        for _, d in enumerate(dets):
+            left, right, top, bottom = d.left() - 20, d.right() + 20, d.top() - 20, d.bottom() + 20
+            face = image[top:bottom, left:right]
+            data.append(cv2.resize(face, (88, 88)))
+        return data
+    except Exception:
+        return 0
+
+
+def get_face_from_file(image_file):
     """ Gets a normalised image from a individual file path.
     :param image_file: A image path to be processed.
     :type image_file: str
@@ -102,10 +121,19 @@ def get_face(image_file):
     """
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
-    detector = dlib.get_frontal_face_detector()
-    dets, data = detector(image, 1), []
-    for _, d in enumerate(dets):
-        left, right, top, bottom = d.left() - 20, d.right() + 20, d.top() - 20, d.bottom() + 20
-        face = image[top:bottom, left:right]
-        data.append(cv2.resize(face, (88, 88)))
-    return data
+    return get_face(image)
+
+
+def get_face_from_frame(image_frame):
+    """ Gets a normalised image from a image.
+    :param image_frame: The frame to extract the face.
+    :type image_frame: OpenCV image
+    :return: A normalised image of the face from the inputted image.
+    :rtype: image
+    """
+    try:
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        image = clahe.apply(cv2.cvtColor(image_frame, cv2.COLOR_BGR2GRAY))
+        return get_face(image)
+    except Exception:
+        return 0
