@@ -2,9 +2,9 @@ import sys
 import cv2
 import time
 import numpy
-import thread
 import select
 import builddata
+import threading
 import websocket
 import emotionclassifier
 
@@ -58,12 +58,16 @@ def main():
 
         elif mode == 'run':
             if len(sys.argv) > 3:
-                address = get_address_from_config('../config.txt')
                 try:
-                    thread.start_new_thread(run, (sys.argv[2], int(sys.argv[3])))
-                    thread.start_new_thread(network, address)
-                except:
+                    run_thread = MyThread(0)
+                    network_thread = MyThread(1)
+                    run_thread.start()
+                    network_thread.start()
+                    while network_thread.is_alive():
+                        continue
+                except Exception as err:
                     print "Error: unable to start thread"
+                    print err.message
 
             else:
                 print 'Please add \'Session Save Path\' \'Number of Classes\''
@@ -100,16 +104,32 @@ def get_address_from_config(config_file):
                 if line and len(line) > 0:
                     pair = line.split("=")
                     if pair[0] == 'EmotionAddress':
-                        return pair[1]
+                        return 'ws://localhost:' + pair[1].replace('\n', '') + '/websocket'
         return 0
     except IOError as err:
         print err.message
 
 
-def run(model_location, num_classes):
+class MyThread (threading.Thread):
+    def __init__(self, id):
+        threading.Thread.__init__(self)
+        self.id = id
+
+    def run(self):
+        if self.id == 0:
+            print 'Starting ' + str(self.id)
+            run()
+            print 'Exiting ' + str(self.id)
+        elif self.id == 1:
+            print 'Starting ' + str(self.id)
+            run_network()
+            print 'Exiting ' + str(self.id)
+
+
+def run():
     global running
     start, video, q = time.clock(), cv2.VideoCapture(0), []
-    classifier = emotionclassifier.EmotionClassifier(num_classes, model_location)
+    classifier = emotionclassifier.EmotionClassifier(int(sys.argv[3]), sys.argv[2])
     if video.grab():
         while running:
             _, frame = video.read()
@@ -150,7 +170,7 @@ def on_error(ws, err):
     print err.message
 
 
-def on_data(ws, data, _someInt, _someBool):
+def on_data(ws, data):
     if data == 'REQUEST':
         global averages
         string = ''
@@ -161,14 +181,16 @@ def on_data(ws, data, _someInt, _someBool):
         ws.close()
 
 
-def network(address):
+def run_network():
     global running
-    ws = websocket.WebSocketApp(address, on_message = on_data,
-                                on_error = on_error,
-                                on_close = on_close)
-    ws.on_open = on_open
-    ws.run_forever()
-    running = False
+    address = get_address_from_config('../config.txt')
+    try:
+        ws = websocket.WebSocketApp(address, on_message=on_data, on_error=on_error, on_close=on_close)
+        ws.on_open = on_open
+        ws.run_forever()
+        running = False
+    except Exception as err:
+        print err.message
 
 
 if __name__ == '__main__':
