@@ -103,7 +103,7 @@ def get_address_from_config(config_file):
                 line.strip()
                 if line and len(line) > 0:
                     pair = line.split("=")
-                    if pair[0] == 'EmotionAddress':
+                    if pair[0] == 'EmotionPort':
                         return 'ws://localhost:' + pair[1].replace('\n', '') + '/websocket'
         return 0
     except IOError as err:
@@ -142,12 +142,12 @@ def run():
                 else:
                     q.pop()
                     q.insert(0, classification)
+                for i in range(len(q[0])):
                     average = 0
-                    for i in range(len(q[0])):
-                        for j in range(10):
-                            average += q[j][i] / 10
-                        averages.append(average)
-                    print averages
+                    for j in range(len(q)):
+                        average += q[j][i] / 10
+                    averages.append(average)
+                print averages
             else:
                 print 'Face Not Found'
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
