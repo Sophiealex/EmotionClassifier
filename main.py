@@ -137,7 +137,7 @@ def run():
             if face:
                 temp = []
                 print 'Face Found'
-                classification = classifier.classify(face)
+                classification = classifier.classify(face)[0]
                 if len(q) < 10:
                     q.insert(0, classification)
                 else:
@@ -148,7 +148,7 @@ def run():
                     for j in range(len(q)):
                         average += q[j][i] / 10
                     temp.append(average)
-                averages = temp
+                averages = softmax(temp)
             else:
                 print 'Face Not Found'
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
@@ -156,6 +156,15 @@ def run():
                 break
     else:
         print 'No Camera'
+
+
+def softmax(array):
+    array_sum, new_array = 0, []
+    for i in array:
+      array_sum += abs(i)
+    for i in array:
+        new_array.append(abs(i / array_sum))
+    return new_array
 
 
 def on_open(ws):
