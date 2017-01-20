@@ -8,8 +8,8 @@ import threading
 import websocket
 import emotionclassifier
 
-averages, running = [], True
 
+averages, running = [], True
 
 def main():
     if len(sys.argv) >= 2:
@@ -127,7 +127,7 @@ class MyThread (threading.Thread):
 
 
 def run():
-    global running
+    global averages
     start, video, q = time.clock(), cv2.VideoCapture(0), []
     classifier = emotionclassifier.EmotionClassifier(int(sys.argv[3]), sys.argv[2])
     if video.grab():
@@ -135,6 +135,7 @@ def run():
             _, frame = video.read()
             face = builddata.get_face_from_frame(frame)
             if face:
+                temp = []
                 print 'Face Found'
                 classification = classifier.classify(face)
                 if len(q) < 10:
@@ -146,8 +147,8 @@ def run():
                     average = 0
                     for j in range(len(q)):
                         average += q[j][i] / 10
-                    averages.append(average)
-                print averages
+                    temp.append(average)
+                averages = temp
             else:
                 print 'Face Not Found'
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
@@ -158,7 +159,7 @@ def run():
 
 
 def on_open(ws):
-    ws.send('Hello Server -- from Python')
+    ws.send('EMOTION')
     print 'Connected to server!'
 
 
@@ -171,12 +172,13 @@ def on_error(ws, err):
 
 
 def on_data(ws, data):
+    print 'Recived: ' + data
     if data == 'REQUEST':
-        global averages
         string = ''
         for i in averages:
-            string += str(i) + ','
-        ws.send(string)
+            string += str(i) + ' '
+        print 'Sent: ' + string
+        ws.send(string.replace('[','').replace(']',''))
     elif data == 'CLOSE':
         ws.close()
 
