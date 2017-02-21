@@ -138,8 +138,9 @@ class EmotionClassifier:
                     if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
                         saver.save(sess, self.save_path) if self.save_path != '' else ''
                         end = time.clock()
-                        print 'Epoch', '%03d' % epoch, ' Time = {:.2f}'.format(end - start),\
-                              ' Accuracy = {:.5f}'.format(avg_acc / i), ' Loss = {:.5f}'.format(avg_loss / i)
+                        print 'Epoch', '%03d' % (epoch + 1), ' Time = {:.2f}'.format(end - start),\
+                              ' Accuracy = {:.5f}'.format(avg_acc / len(batches)), \
+                              ' Loss = {:.5f}'.format(avg_loss / len(batches))
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
@@ -166,8 +167,6 @@ class EmotionClassifier:
         with tf.Session() as sess:
             sess.run(init)
             saver.restore(sess, self.save_path)
-
-            """
             batches = split_data(testing_data, batch_size)
             avg_acc = 0
             for batch in batches:
@@ -175,7 +174,6 @@ class EmotionClassifier:
                 acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
                 avg_acc += acc / len(batches)
             return avg_acc
-            """
 
     def classify(self, data):
         """ Loads the pre-trained model and uses the input data to return a classification.

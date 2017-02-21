@@ -2,10 +2,12 @@ import os
 import cv2
 import dlib
 import numpy
+import shutil
 import random
 
 
-def build_data(image_dir, label_dir, output_dir, itype='png'):
+
+def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmentation=True):
     """ Builds a dataset using data augmentation and normalization built for the CK+ Emotion Set.
     :param image_dir: A directory of input images.
     :type image_dir: str
@@ -15,38 +17,58 @@ def build_data(image_dir, label_dir, output_dir, itype='png'):
     :type output_dir: str
     :param itype: File type for output images.
     :type itype: str
-    :return: void
+    :param advanced_augmentation: If advanced augmentation is enabled.
+    :type: advanced_augmentation: bool
+    :return: The number of images.
+    :rtype: int
     """
-    count = 0
-    for folder in os.listdir(image_dir):
-        if os.path.isdir(image_dir + folder):
-            for inner_folder in os.listdir(image_dir + folder):
-                if os.path.isdir(image_dir + folder + '/' + inner_folder):
-                    for input_file in os.listdir(image_dir + folder + '/' + inner_folder):
+    image_files = []
+    for outer_folder in os.listdir(image_dir):
+        if os.path.isdir(image_dir + '/' + outer_folder):
+            for inner_folder in os.listdir(image_dir + '/' + outer_folder):
+                if os.path.isdir(image_dir + '/' + outer_folder + '/' + inner_folder):
+                    for input_file in os.listdir(image_dir + '/' + outer_folder + '/' + inner_folder):
                         if input_file.split('.')[1] != itype:
                             break
-                        label_file = label_dir + folder + '/' + inner_folder + '/' + input_file[:-4] + '_emotion.txt'
+                        label_file = label_dir+'/'+outer_folder+'/'+inner_folder+'/'+input_file[:-4] + '_emotion.txt'
                         if os.path.isfile(label_file):
-                            f = open(label_file, 'r')
-                            label = int(float(f.readline()))
-                            print input_file + "\tCurrent count: " + str(count)
-                            image_file = image_dir + folder + '/' + inner_folder + '/' + input_file
-                            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                            image = clahe.apply(cv2.imread(image_file, cv2.IMREAD_GRAYSCALE))
-                            detector = dlib.get_frontal_face_detector()
-                            detections = detector(image, 1)
-                            for _, d in enumerate(detections):
-                                left, right, top, bottom = d.left()-20, d.right()+20, d.top()-20, d.bottom()+20
-                                face = image[top:bottom, left:right]
-                                face = cv2.resize(face, (96, 96))
-                                patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
-                                           face[8:96, 8:96], face[4:92, 4:92]]
-                                for i in range(len(patches)):
-                                    name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count)+'.'+itype
-                                    cv2.imwrite(name, patches[i])
-                                    name = output_dir+str(label)+'/'+image_file[-21:-4]+str(count + 1)+'.'+itype
-                                    cv2.imwrite(name, cv2.flip(patches[i], 1))
-                                    count += 2
+                            read_file = open(label_file, 'r')
+                            label = int(float(read_file.readline()))
+                            image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+input_file, label))
+                            neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[0]
+                            if neutral_file.split('.')[1] != itype:
+                                neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[1]
+                            image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+neutral_file, 0))
+
+    print '-------------Files Collected----------------------------------------------------------------------'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        for i in range(8):
+            os.makedirs(output_dir+'/'+str(i))
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    detector, count = dlib.get_frontal_face_detector(), 0
+    for image_file in image_files:
+        image = clahe.apply(cv2.imread(image_file[0], cv2.IMREAD_GRAYSCALE))
+        detections = detector(image, 1)
+        for _, detection in enumerate(detections):
+            left, right, top, bottom = detection.left()-20,detection.right()+20,detection.top()-20,detection.bottom()+20
+            face = image[top:bottom, left:right]
+            face = cv2.resize(face, (96, 96))
+            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
+                       face[8:96, 8:96], face[4:92, 4:92]]
+            for i in range(len(patches)):
+                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
+                cv2.imwrite(name, patches[i])
+                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count + 1) + '.' + itype
+                cv2.imwrite(name, cv2.flip(patches[i], 1))
+                count += 2
+            if advanced_augmentation:
+                hello = 'hello'
+                # This is where the stuff happens
+        if count % 100 == 0:
+            print 'Current count = ' + str(count)
+
     return count
 
 
@@ -59,7 +81,7 @@ def normalize(output_dir):
     """
     minimum, num_files = 1000000, []
     for folder in os.listdir(output_dir):
-        path = output_dir + folder
+        path = output_dir + '/' + folder
         files = len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])
         num_files.append([files, path])
         print path + ' has ' + str(files) + ' files'
@@ -74,6 +96,20 @@ def normalize(output_dir):
             num_files[i][0] -= 1
 
     return minimum * len(num_files)
+
+
+def split_data(input_dir, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        os.makedirs(output_dir + '/1')
+        shutil.copytree(input_dir + '/0', output_dir + '/0')
+        for i in [1, 3, 4, 6]:
+            for image_file in os.listdir(input_dir + '/' + str(i)):
+                shutil.copy(input_dir+'/'+str(i)+'/'+image_file, output_dir+'/'+str(1)+'/'+image_file)
+        os.makedirs(output_dir + '/2')
+        for i in [2, 5, 7]:
+            for image_file in os.listdir(input_dir + '/' + str(i)):
+                shutil.copy(input_dir+'/'+str(i)+'/'+image_file, output_dir+'/'+str(2)+'/'+image_file)
 
 
 def get_data(input_dir, num_classes):

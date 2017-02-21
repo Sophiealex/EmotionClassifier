@@ -75,11 +75,23 @@ def main():
         elif mode == 'build':
             if len(sys.argv) > 4:
                 start = time.clock()
-                count = builddata.build_data(sys.argv[2], sys.argv[3], sys.argv[4])
+                args = [sys.argv[2], sys.argv[3], sys.argv[4]]
+                for i in range(len(args)):
+                    if args[i][-1] == '/':
+                        args[i] = args[i][:len(args[i])-1]
+                print args
+                count = builddata.build_dataset(args[0], args[1], args[2])
                 end = time.clock()
                 print 'Augmented Dataset built ' + str(count) + ' images in ' + str(end - start) + 's'
             else:
                 print 'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\''
+
+        elif mode == 'split':
+            if len(sys.argv) > 2:
+                start = time.clock()
+                builddata.split_data(sys.argv[2], sys.argv[3])
+                end = time.clock()
+                print 'The dataset was split into Positive and Negative in ' + str(end - start) + 's'
 
         elif mode == 'normalize':
             if len(sys.argv) > 2:
@@ -159,12 +171,9 @@ def run():
 
 
 def softmax(array):
-    array_sum, new_array = 0, []
-    for i in array:
-      array_sum += abs(i)
-    for i in array:
-        new_array.append(abs(i / array_sum))
-    return new_array
+    e = numpy.exp(numpy.array(array) / 1.0)
+    dist = e / numpy.sum(e)
+    return dist
 
 
 def on_open(ws):
