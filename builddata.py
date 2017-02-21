@@ -55,17 +55,22 @@ def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmen
             left, right, top, bottom = detection.left()-20,detection.right()+20,detection.top()-20,detection.bottom()+20
             face = image[top:bottom, left:right]
             face = cv2.resize(face, (96, 96))
-            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
-                       face[8:96, 8:96], face[4:92, 4:92]]
-            for i in range(len(patches)):
+            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96], face[8:96, 8:96], face[4:92, 4:92]]
+            for patch in patches:
                 name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
-                cv2.imwrite(name, patches[i])
+                cv2.imwrite(name, patch)
                 name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count + 1) + '.' + itype
-                cv2.imwrite(name, cv2.flip(patches[i], 1))
+                cv2.imwrite(name, cv2.flip(patch, 1))
                 count += 2
-            if advanced_augmentation:
-                hello = 'hello'
-                # This is where the stuff happens
+                if advanced_augmentation:
+                    sections = [patch[0:44, 0:88], patch[44:88, 0:88], patch[0:88, 0:44], patch[0:88, 44:88]]
+                    section = cv2.resize(sections[0], (88,88), 0, 0, cv2.INTER_AREA)
+
+                    cv2.namedWindow('image')
+                    cv2.imshow('image', section)
+                    cv2.waitKey()
+                    cv2.destroyAllWindows()
+
         if count % 100 == 0:
             print 'Current count = ' + str(count)
 

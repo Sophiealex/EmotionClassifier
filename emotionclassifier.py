@@ -113,11 +113,11 @@ class EmotionClassifier:
         """
         start = time.clock()
         batches = split_data(training_data, batch_size)
-        cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.model, self.y))
+        cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(self.model, self.y))
         optimizer = tf.train.AdamOptimizer().minimize(cost)
         init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
+        accuracy = tf.reduce_sum(tf.cast(correct_prediction, 'float'))
 
         tf.summary.scalar('loss', cost)
         tf.summary.scalar('accuracy', accuracy)
