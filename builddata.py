@@ -63,13 +63,15 @@ def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmen
                 cv2.imwrite(name, cv2.flip(patch, 1))
                 count += 2
                 if advanced_augmentation:
-                    sections = [patch[0:44, 0:88], patch[44:88, 0:88], patch[0:88, 0:44], patch[0:88, 44:88]]
-                    section = cv2.resize(sections[0], (88,88), 0, 0, cv2.INTER_AREA)
-
-                    cv2.namedWindow('image')
-                    cv2.imshow('image', section)
-                    cv2.waitKey()
-                    cv2.destroyAllWindows()
+                    params = [[0, 44, 0, 88], [44, 88, 0 , 88], [0, 88, 0, 44], [0, 88, 44, 88]]
+                    for param in params:
+                        section = numpy.zeros((88, 88), dtype=numpy.uint8)
+                        for i in range(param[0], param[1]):
+                            for j in range(param[2], param[3]):
+                                section[i, j] = patch[i, j]
+                        count+=1
+                        name = output_dir+'/'+str(image_file[1])+'/'+image_file[0][-21:-4]+str(count)+'.'+itype
+                        cv2.imwrite(name, section)
 
         if count % 100 == 0:
             print 'Current count = ' + str(count)
