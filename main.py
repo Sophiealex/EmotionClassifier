@@ -7,6 +7,7 @@ import builddata
 import threading
 import websocket
 import emotionclassifier
+import newemotionalclassifier
 
 
 averages, running = [], True
@@ -17,13 +18,16 @@ def main():
         if mode == 'train':
             if len(sys.argv) > 5:
                 start = time.clock()
-                faces = builddata.get_data(sys.argv[2], int(sys.argv[5]))
-                training_data, testing_data = emotionclassifier.divide_data(faces, 0.1)
+                faces = builddata.get_data(sys.argv[2], int(sys.argv[5]), newStyle=False)
+                training_data, testing_data = emotionclassifier.divide_data(faces, 0.2)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
-
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[5]), sys.argv[3])
                 accuracy = classifier.train(training_data, testing_data, epochs=int(sys.argv[4]), intervals=1)
+
+                # classifier = newemotionalclassifier.NewEmotionClassifier(int(sys.argv[5]), sys.argv[3])
+                # classifier.train(faces, epochs=int(sys.argv[4]))
+
                 end = time.clock()
                 print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'

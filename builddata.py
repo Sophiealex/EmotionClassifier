@@ -4,7 +4,7 @@ import dlib
 import numpy
 import shutil
 import random
-
+from keras.preprocessing import image as image_utils
 
 
 def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmentation=True):
@@ -119,7 +119,7 @@ def split_data(input_dir, output_dir):
                 shutil.copy(input_dir+'/'+str(i)+'/'+image_file, output_dir+'/'+str(2)+'/'+image_file)
 
 
-def get_data(input_dir, num_classes):
+def get_data(input_dir, num_classes, newStyle=False):
     """ Gets the data from a directory of images organised by classification.
     :param input_dir: The directory of images.
     :type input_dir: str
@@ -131,7 +131,13 @@ def get_data(input_dir, num_classes):
         for image_file in os.listdir(input_dir + folder):
             labels = numpy.zeros(num_classes)
             labels[int(label)] = 1
-            data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
+            if newStyle:
+                image = image_utils.load_img(input_dir + folder + '/' + image_file, True, (88, 88))
+                image = image_utils.img_to_array(image)
+                data.append((image, labels))
+
+            else:
+                data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
         label += 1
     return data
 
