@@ -4,10 +4,13 @@ import dlib
 import numpy
 import shutil
 import random
-from keras.preprocessing import image as image_utils
+import scipy.io as io
+import face_frontalization.frontalize as front
+import face_frontalization.facial_feature_detector as feature_extraction
+import face_frontalization.camera_calibration as camera
 
 
-def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmentation=True):
+def build_dataset(image_dir, label_dir, output_dir, reasource_dir, itype='png', augmentation=False, frontalization=True):
     """ Builds a dataset using data augmentation and normalization built for the CK+ Emotion Set.
     :param image_dir: A directory of input images.
     :type image_dir: str
@@ -15,10 +18,14 @@ def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmen
     :type label_dir: str
     :param output_dir: A directory for new images to be sorted.
     :type output_dir: str
+    :param reasource_dir: A directory for the resources needed to be accessed.
+    :type reasource_dir: str
     :param itype: File type for output images.
     :type itype: str
-    :param advanced_augmentation: If advanced augmentation is enabled.
-    :type: advanced_augmentation: bool
+    :param augmentation: If advanced augmentation is enabled.
+    :type: augmentation: bool
+    :param frontalization: If frontalization is enabled.
+    :type: frontalization: bool
     :return: The number of images.
     :rtype: int
     """
@@ -46,32 +53,30 @@ def build_dataset(image_dir, label_dir, output_dir, itype='png', advanced_augmen
         for i in range(8):
             os.makedirs(output_dir+'/'+str(i))
 
+    if frontalization:
+        model3d = front.ThreeD_Model(reasource_dir + '/frontalization_models/model3Ddlib.mat', 'model_dlib')
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     detector, count = dlib.get_frontal_face_detector(), 0
     for image_file in image_files:
-        image = clahe.apply(cv2.imread(image_file[0], cv2.IMREAD_GRAYSCALE))
-        detections = detector(image, 1)
-        for _, detection in enumerate(detections):
-            left, right, top, bottom = detection.left()-20,detection.right()+20,detection.top()-20,detection.bottom()+20
-            face = image[top:bottom, left:right]
-            face = cv2.resize(face, (96, 96))
-            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96], face[8:96, 8:96], face[4:92, 4:92]]
-            for patch in patches:
-                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
-                cv2.imwrite(name, patch)
-                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count + 1) + '.' + itype
-                cv2.imwrite(name, cv2.flip(patch, 1))
-                count += 2
-                if advanced_augmentation:
-                    params = [[0, 44, 0, 88], [44, 88, 0 , 88], [0, 88, 0, 44], [0, 88, 44, 88]]
-                    for param in params:
-                        section = numpy.zeros((88, 88), dtype=numpy.uint8)
-                        for i in range(param[0], param[1]):
-                            for j in range(param[2], param[3]):
-                                section[i, j] = patch[i, j]
-                        count+=1
-                        name = output_dir+'/'+str(image_file[1])+'/'+image_file[0][-21:-4]+str(count)+'.'+itype
-                        cv2.imwrite(name, section)
+        image = clahe.apply(cv2.imread(image_file[0], 0))
+        patches = [image[0:385,0:512],image[0:385,128:640],image[96:480,0:512],image[96:480,128:640],image[48:432,64:576]]
+        for patch in patches:
+            for thing in [patch, cv2.flip(patch, 1)]:
+                if frontalization:
+                    thing = cv2.cvtColor(thing, cv2.COLOR_GRAY2RGB)
+                    landmarks = feature_extraction.get_landmarks(thing, reasource_dir)
+                    proj_matrix, camera_matrix, rmat, tvec = camera.estimate_camera(model3d, landmarks[0])
+                    eyemask = numpy.asarray(io.loadmat(reasource_dir + '/frontalization_models/eyemask.mat')['eyemask'])
+                    _, thing = front.frontalize(thing, proj_matrix, model3d.ref_U, eyemask)
+                    thing = cv2.cvtColor(thing.astype(numpy.uint8), cv2.COLOR_RGB2GRAY)
+                detections = detector(thing, 1)
+                for _, detection in enumerate(detections):
+                    left, right, top, bottom = detection.left()-20,detection.right()+20,detection.top()-20,detection.bottom()+20
+                    face = thing[top:bottom, left:right]
+                    face = cv2.resize(face, (96, 96))
+                    name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
+                    cv2.imwrite(name, face)
+                    count+=1
 
         if count % 100 == 0:
             print 'Current count = ' + str(count)
@@ -119,7 +124,7 @@ def split_data(input_dir, output_dir):
                 shutil.copy(input_dir+'/'+str(i)+'/'+image_file, output_dir+'/'+str(2)+'/'+image_file)
 
 
-def get_data(input_dir, num_classes, newStyle=False):
+def get_data(input_dir, num_classes):
     """ Gets the data from a directory of images organised by classification.
     :param input_dir: The directory of images.
     :type input_dir: str
@@ -131,13 +136,7 @@ def get_data(input_dir, num_classes, newStyle=False):
         for image_file in os.listdir(input_dir + folder):
             labels = numpy.zeros(num_classes)
             labels[int(label)] = 1
-            if newStyle:
-                image = image_utils.load_img(input_dir + folder + '/' + image_file, True, (88, 88))
-                image = image_utils.img_to_array(image)
-                data.append((image, labels))
-
-            else:
-                data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
+            data.append((cv2.imread(input_dir + folder + '/' + image_file, cv2.IMREAD_GRAYSCALE), labels))
         label += 1
     return data
 

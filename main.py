@@ -7,7 +7,6 @@ import builddata
 import threading
 import websocket
 import emotionclassifier
-import newemotionalclassifier
 
 
 averages, running = [], True
@@ -18,16 +17,12 @@ def main():
         if mode == 'train':
             if len(sys.argv) > 5:
                 start = time.clock()
-                faces = builddata.get_data(sys.argv[2], int(sys.argv[5]), newStyle=False)
+                faces = builddata.get_data(sys.argv[2], int(sys.argv[5]), sys.argv[3])
                 training_data, testing_data = emotionclassifier.divide_data(faces, 0.2)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[5]), sys.argv[3])
                 accuracy = classifier.train(training_data, testing_data, epochs=int(sys.argv[4]), intervals=1)
-
-                # classifier = newemotionalclassifier.NewEmotionClassifier(int(sys.argv[5]), sys.argv[3])
-                # classifier.train(faces, epochs=int(sys.argv[4]))
-
                 end = time.clock()
                 print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
@@ -77,18 +72,18 @@ def main():
                 print 'Please add \'Session Save Path\' \'Number of Classes\''
 
         elif mode == 'build':
-            if len(sys.argv) > 4:
+            if len(sys.argv) > 5:
                 start = time.clock()
-                args = [sys.argv[2], sys.argv[3], sys.argv[4]]
+                args = [sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]]
                 for i in range(len(args)):
                     if args[i][-1] == '/':
                         args[i] = args[i][:len(args[i])-1]
                 print args
-                count = builddata.build_dataset(args[0], args[1], args[2])
+                count = builddata.build_dataset(args[0], args[1], args[2], args[3])
                 end = time.clock()
                 print 'Augmented Dataset built ' + str(count) + ' images in ' + str(end - start) + 's'
             else:
-                print 'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\''
+                print 'Please add \'Image Dir\' \'Label Dir\' \'Output Dir\' \'Resources Dir\''
 
         elif mode == 'split':
             if len(sys.argv) > 2:
