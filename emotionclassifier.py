@@ -1,7 +1,10 @@
 import time
 import random
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_fscore_support as score
 
 
 def divide_data(data, test_percent=0.2):
@@ -41,6 +44,39 @@ def split_data(seq, num):
         if len(temp) != 0:
             out.append(temp)
     return out
+
+
+def print_confusion_matrix(p_labels, t_labels):
+    p_labels = pd.Series(p_labels)
+    t_labels = pd.Series(t_labels)
+    df_confusion = pd.crosstab(t_labels, p_labels, rownames=['Actual'], colnames=['Predicted'], margins=True)
+    return df_confusion
+
+
+def confusion_matrix(labels, y_pred, not_partial):
+    y_actu = my_own_shit_function(labels)
+    df = print_confusion_matrix(y_pred, y_actu)
+    print '\n',df
+    if not_partial:
+       print '\n',classification_report(y_actu, y_pred)
+
+
+def my_own_shit_function(thing):
+    new_thing = np.zeros(len(thing))
+    for i in range(len(thing)):
+        for j in range(len(thing[i])):
+            if thing[i][j] == 1.0:
+                new_thing[i] = int(j)
+    return new_thing
+
+
+def do_eval(message, sess, correct_prediction, accuracy, pred, X_, y_, x, y, dropout):
+    predictions = sess.run([correct_prediction], feed_dict={x: X_, y: y_, dropout: 1.})
+    prediction = tf.argmax(pred,1)
+    labels = prediction.eval(feed_dict={x: X_, y: y_, dropout: 1.}, session=sess)
+    print message, accuracy.eval({x: X_, y: y_}),'\n'
+    confusion_matrix('Partial Confusion matrix', y_,predictions[0], False)  # Partial confusion Matrix
+    confusion_matrix('Complete Confusion matrix', y_,labels, True)  # complete confusion Matrix
 
 
 class EmotionClassifier:
@@ -164,12 +200,17 @@ class EmotionClassifier:
 
             saver.save(sess, self.save_path) if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
-            avg_acc = 0
+            avg_acc, labels, _y = 0, np.zeros(0), []
             for batch in batches:
                 x, y = [m[0] for m in batch], [n[1] for n in batch]
+                _y += y
                 acc = accuracy.eval({self.x: x, self.y: y, self.keep_prob: 1.})
                 avg_acc += acc / len(batches)
+                prediction = tf.argmax(self.model, 1)
+                label = prediction.eval(feed_dict={self.x: x, self.y: y, self.keep_prob: 1.}, session=sess)
+                labels = np.append(labels, label)
 
+            confusion_matrix(_y, labels, True)
             return avg_acc
 
     def accuracy(self, testing_data, batch_size=128):
