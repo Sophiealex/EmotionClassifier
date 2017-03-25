@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support as score
 
 
-def divide_data(data, test_percent=0.2):
+def divide_data(data, test_percent=0.1):
     """ Divides input data into training and testing data.
     :param data: A list to be split
     :type data: A list
@@ -154,7 +154,7 @@ class EmotionClassifier:
         ssum = tf.reduce_sum(mul, axis=3)
         return tf.add(ssum, biases)
 
-    def train(self, training_data, testing_data, epochs=5000, batch_size=32, intervals=1):
+    def train(self, training_data, testing_data, epochs=5000, batch_size=32, intervals=1, log='log'):
         """ Trains a classifier with inputted training and testing data for a number of epochs.
         :param training_data: A list of tuples used for training the classifier.
         :type training_data: A list of tuples each containing a list of landmarks and a list of classifications.
@@ -174,31 +174,31 @@ class EmotionClassifier:
         init, saver = tf.global_variables_initializer(), tf.train.Saver()
         correct_prediction = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
-
-        tf.summary.scalar('loss', cost)
-        tf.summary.scalar('accuracy', accuracy)
-        merged_summary_op = tf.summary.merge_all()
+        avg_loss, avg_acc = 0, 0
 
         with tf.Session() as sess:
             sess.run(init)
-            summary_writer = tf.summary.FileWriter('Resources/logs', graph=tf.get_default_graph())
+            summary_writer = tf.summary.FileWriter(self.save_path+log, graph=tf.get_default_graph())
             for epoch in range(epochs):
                 avg_loss, avg_acc = 0, 0
                 for i in range(len(batches)):
                     x, y = [m[0] for m in batches[i]], [n[1] for n in batches[i]]
-                    _, loss, acc, summary = sess.run([optimizer, cost, accuracy, merged_summary_op],
+                    _, loss, acc = sess.run([optimizer, cost, accuracy],
                                                      feed_dict={self.x: x, self.y: y, self.keep_prob: 1.})
                     avg_loss += loss
                     avg_acc += acc
-                    summary_writer.add_summary(summary, epoch * len(batches) + i)
-                    if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
-                        saver.save(sess, self.save_path) if self.save_path != '' else ''
-                        end = time.clock()
-                        print 'Epoch', '%03d' % (epoch + 1), ' Time = {:.2f}'.format(end - start),\
-                              ' Loss = {:.5f}'.format(avg_loss / len(batches))
-                        # ' Accuracy = {:.5f}'.format(avg_acc / len(batches)), \
+                    summary = tf.Summary()
+                    summary.value.add(tag='Accuracy', simple_value=(avg_acc / len(batches)))
+                    summary.value.add(tag='Loss', simple_value=(avg_loss / len(batches)))
+                summary_writer.add_summary(summary, epoch)
+                if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
+                    saver.save(sess, self.save_path) if self.save_path != '' else ''
+                    end = time.clock()
+                    print 'Epoch', '%03d' % (epoch + 1), ' Time = {:.2f}'.format(end - start),\
+                        ' Loss = {:.5f}'.format(avg_loss / len(batches))
+                    # ' Accuracy = {:.5f}'.format(avg_acc / len(batches)), \
 
-            saver.save(sess, self.save_path) if self.save_path != '' else ''
+            saver.save(sess, self.save_path+'model.cpkt') if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
             avg_acc, labels, _y = 0, np.zeros(0), []
             for batch in batches:

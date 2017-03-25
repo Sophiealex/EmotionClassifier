@@ -18,16 +18,16 @@ def main():
             if len(sys.argv) > 5:
                 start = time.clock()
                 faces = builddata.get_data(sys.argv[2], int(sys.argv[5]))
-                training_data, testing_data = emotionclassifier.divide_data(faces, 0.2)
+                training_data, testing_data = emotionclassifier.divide_data(faces, 0.1)
                 print 'number of training examples = ' + str(len(training_data))
                 print 'number of testing examples  = ' + str(len(testing_data)) + '\n'
                 classifier = emotionclassifier.EmotionClassifier(int(sys.argv[5]), sys.argv[3])
-                accuracy = classifier.train(training_data, testing_data, epochs=int(sys.argv[4]), intervals=1)
+                accuracy = classifier.train(training_data, testing_data, epochs=int(sys.argv[4]), intervals=1, log=sys.argv[6])
                 end = time.clock()
                 print 'Testing Accuracy: ' + '{:.9f}'.format(accuracy)
                 print 'Training Time: ' + '{:.2f}'.format(end - start) + 's'
             else:
-                print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Epochs\' \'Number of Classes\''
+                print 'Please add \'Image Dir\' \'Session Save Path\' \'Number of Epochs\' \'Number of Classes\' \'log\''
 
         elif mode == 'accuracy':
             if len(sys.argv) > 4:
@@ -78,7 +78,7 @@ def main():
                 for i in range(len(args)):
                     if args[i][-1] == '/':
                         args[i] = args[i][:len(args[i])-1]
-                count = builddata.build_dataset(args[0], args[1], args[2], args[3])
+                count = builddata.build_dataset(args[0], args[1], args[2], args[3], mode=int(sys.argv[6]))
                 end = time.clock()
                 print 'Augmented Dataset built ' + str(count) + ' images in ' + str(end - start) + 's'
             else:

@@ -12,7 +12,7 @@ import camera_calibration as camera
 import facial_feature_detector as feature_extraction
 
 
-def build_dataset(image_dir, label_dir, output_dir, reasource_dir, itype='png', augmentation=False, frontalization=True):
+def build_dataset(image_dir, label_dir, output_dir, reasource_dir, itype='png', frontalization=True, mode=0):
     """ Builds a dataset using data augmentation and normalization built for the CK+ Emotion Set.
     :param image_dir: A directory of input images.
     :type image_dir: str
@@ -24,13 +24,106 @@ def build_dataset(image_dir, label_dir, output_dir, reasource_dir, itype='png', 
     :type reasource_dir: str
     :param itype: File type for output images.
     :type itype: str
-    :param augmentation: If advanced augmentation is enabled.
-    :type: augmentation: bool
     :param frontalization: If frontalization is enabled.
     :type: frontalization: bool
     :return: The number of images.
     :rtype: int
     """
+    image_files = []
+    if mode == 0 or mode == 2:
+        if mode == 2:
+            image_dir = image_dir + '/Data/Images'
+        for outer_folder in os.listdir(image_dir):
+            if os.path.isdir(image_dir + '/' + outer_folder):
+                for inner_folder in os.listdir(image_dir + '/' + outer_folder):
+                    if os.path.isdir(image_dir + '/' + outer_folder + '/' + inner_folder):
+                        for input_file in os.listdir(image_dir + '/' + outer_folder + '/' + inner_folder):
+                            if input_file.split('.')[1] != itype:
+                                break
+                            label_file = label_dir+'/'+outer_folder+'/'+inner_folder+'/'+input_file[:-4] + '_emotion.txt'
+                            if os.path.isfile(label_file):
+                                read_file = open(label_file, 'r')
+                                label = int(float(read_file.readline()))
+                                for i in range(-1, -6, -1):
+                                    image_file = sorted(os.listdir(image_dir + '/' + outer_folder + '/' + inner_folder))[i]
+                                    if image_file.split('.')[1] == itype:
+                                        image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+image_file, label))
+                                neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[0]
+                                if neutral_file.split('.')[1] != itype:
+                                    neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[1]
+                                image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+neutral_file, 0))
+    if mode == 1 or mode == 2:
+        if mode == 2:
+            image_dir = image_dir + '/KDEF'
+        for folder in os.listdir(image_dir):
+            if os.path.isdir(image_dir + '/' + folder):
+                for file in os.listdir(image_dir + '/' + folder):
+                    if file.split('.')[1] == 'JPG' and file[6] != 'F':
+                        label = 0
+                        if file[4:6] == 'AF':
+                            label = 4
+                        elif file[4:6] == 'AN':
+                            label = 1
+                        elif file[4:6] == 'DI':
+                            label = 3
+                        elif file[4:6] == 'HA':
+                            label = 5
+                        elif file[4:6] == 'NE':
+                            label = 0
+                        elif file[4:6] == 'SA':
+                            label = 6
+                        elif file[4:6] == 'SU':
+                            label = 7
+                        image_files.append((image_dir + '/' + folder + '/' + file, label))
+    print len(image_files)
+    print '-------------Files Collected----------------------------------------------------------------------'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        for i in range(8):
+            os.makedirs(output_dir+'/'+str(i))
+
+    if frontalization:
+        model3d = front.ThreeD_Model(reasource_dir + '/frontalization_models/model3Ddlib.mat', 'model_dlib')
+        eyemask = numpy.asarray(io.loadmat(reasource_dir + '/frontalization_models/eyemask.mat')['eyemask'])
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    detector, count = dlib.get_frontal_face_detector(), 0
+    for image_file in image_files:
+        image = clahe.apply(cv2.imread(image_file[0], cv2.IMREAD_GRAYSCALE))
+        if frontalization:
+            image = cv2.resize(image, (150, 150))
+            image = cv2.cvtColor(image.astype(numpy.uint8), cv2.COLOR_GRAY2BGR)
+            landmarks = feature_extraction.get_landmarks(image, reasource_dir)
+            if len(landmarks) > 0:
+                proj_matrix, camera_matrix, rmat, tvec = camera.estimate_camera(model3d, landmarks[0])
+                image, _ = front.frontalize(image, proj_matrix, model3d.ref_U, eyemask)
+            image = cv2.cvtColor(image.astype(numpy.uint8), cv2.COLOR_BGR2GRAY)
+        detections = detector(image, 1)
+        for _, detection in enumerate(detections):
+            left, right, top, bottom = detection.left() - 20, detection.right() + 20,\
+                                       detection.top() - 20, detection.bottom() + 20
+            face = image[top:bottom, left:right]
+            face = cv2.resize(face, (96, 96))
+            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
+                       face[8:96, 8:96], face[4:92, 4:92]]
+            for i in range(len(patches)):
+                if mode == 0:
+                    name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
+                    cv2.imwrite(name, patches[i])
+                    name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count+1) + '.' + itype
+                    cv2.imwrite(name, cv2.flip(patches[i], 1))
+                    count += 2
+                if mode == 1:
+                    name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0].split('/')[-1][:-4] + str(count) + '.' + itype
+                    cv2.imwrite(name, patches[i])
+                    count += 1
+
+        if count % 100 == 0:
+            print 'Current count = ' + str(count)
+
+    return count
+
+
+def build_thing(image_dir, label_dir, output_dir, reasource_dir, itype='png'):
     image_files = []
     for outer_folder in os.listdir(image_dir):
         if os.path.isdir(image_dir + '/' + outer_folder):
@@ -58,65 +151,6 @@ def build_dataset(image_dir, label_dir, output_dir, reasource_dir, itype='png', 
         for i in range(8):
             os.makedirs(output_dir+'/'+str(i))
 
-    if frontalization:
-        model3d = front.ThreeD_Model(reasource_dir + '/frontalization_models/model3Ddlib.mat', 'model_dlib')
-        eyemask = numpy.asarray(io.loadmat(reasource_dir + '/frontalization_models/eyemask.mat')['eyemask'])
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    detector, count = dlib.get_frontal_face_detector(), 0
-    for image_file in image_files:
-        image = clahe.apply(cv2.imread(image_file[0], cv2.IMREAD_GRAYSCALE))
-        if frontalization:
-            image = cv2.cvtColor(image.astype(numpy.uint8), cv2.COLOR_GRAY2BGR)
-            landmarks = feature_extraction.get_landmarks(image, reasource_dir)
-            proj_matrix, camera_matrix, rmat, tvec = camera.estimate_camera(model3d, landmarks[0])
-            image, _ = front.frontalize(image, proj_matrix, model3d.ref_U, eyemask)
-            image = cv2.cvtColor(image.astype(numpy.uint8), cv2.COLOR_BGR2GRAY)
-        detections = detector(image, 1)
-        for _, detection in enumerate(detections):
-            left, right, top, bottom = detection.left() - 20, detection.right() + 20,\
-                                       detection.top() - 20, detection.bottom() + 20
-            face = image[top:bottom, left:right]
-            face = cv2.resize(face, (96, 96))
-            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
-                       face[8:96, 8:96], face[4:92, 4:92]]
-            for i in range(len(patches)):
-                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
-                cv2.imwrite(name, patches[i])
-                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count+1) + '.' + itype
-                cv2.imwrite(name, cv2.flip(patches[i], 1))
-                count += 2
-
-        if count % 100 == 0:
-            print 'Current count = ' + str(count)
-
-    return count
-
-
-def build_thing(image_dir, label_dir, output_dir, reasource_dir, itype='png'):
-    image_files = []
-    for outer_folder in os.listdir(image_dir):
-        if os.path.isdir(image_dir + '/' + outer_folder):
-            for inner_folder in os.listdir(image_dir + '/' + outer_folder):
-                if os.path.isdir(image_dir + '/' + outer_folder + '/' + inner_folder):
-                    for input_file in os.listdir(image_dir + '/' + outer_folder + '/' + inner_folder):
-                        if input_file.split('.')[1] != itype:
-                            break
-                        label_file = label_dir+'/'+outer_folder+'/'+inner_folder+'/'+input_file[:-4] + '_emotion.txt'
-                        if os.path.isfile(label_file):
-                            read_file = open(label_file, 'r')
-                            label = int(float(read_file.readline()))
-                            image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+input_file, label))
-                            neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[0]
-                            if neutral_file.split('.')[1] != itype:
-                                neutral_file = sorted(os.listdir(image_dir+'/'+outer_folder+'/'+inner_folder))[1]
-                            image_files.append((image_dir+'/'+outer_folder+'/'+inner_folder+'/'+neutral_file, 0))
-
-    print '-------------Files Collected----------------------------------------------------------------------'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        for i in range(8):
-            os.makedirs(output_dir+'/'+str(i))
-
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     detector, count = dlib.get_frontal_face_detector(), 0
     for image_file in image_files:
@@ -126,10 +160,16 @@ def build_thing(image_dir, label_dir, output_dir, reasource_dir, itype='png'):
             left, right, top, bottom = detection.left()-20,detection.right()+20,detection.top()-20,detection.bottom()+20
             face = image[top:bottom, left:right]
             face = cv2.resize(face, (96, 96))
-            name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
-            cv2.imwrite(name, face)
-            count += 1
-        if count % 10 == 0:
+            patches = [face[0:88, 0:88], face[8:96, 0:88], face[0:88, 8:96],
+                       face[8:96, 8:96], face[4:92, 4:92]]
+            for i in range(len(patches)):
+                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(count) + '.' + itype
+                cv2.imwrite(name, patches[i])
+                name = output_dir + '/' + str(image_file[1]) + '/' + image_file[0][-21:-4] + str(
+                    count + 1) + '.' + itype
+                cv2.imwrite(name, cv2.flip(patches[i], 1))
+                count += 2
+        if count % 100 == 0:
             print 'Current count = ' + str(count)
 
     return count
