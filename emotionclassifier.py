@@ -136,7 +136,7 @@ class EmotionClassifier:
 
         fc1 = tf.reshape(local2, [-1, 15488])
         fc1 = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
-        return fc1
+        return tf.nn.softmax(fc1)
 
     def local(self, previous_layer, kernel_size, channels, weight_name, bias_name):
         shape = previous_layer.get_shape()
@@ -236,15 +236,11 @@ class EmotionClassifier:
                 avg_acc += acc / len(batches)
             return avg_acc
 
-    def classify(self, data):
+    def classify(self, data, sess):
         """ Loads the pre-trained model and uses the input data to return a classification.
         :param data: The data that is to be classified.
         :type data: A list.
         :return: A classification.
         :rtype: int.
         """
-        init, saver = tf.global_variables_initializer(), tf.train.Saver()
-        with tf.Session() as sess:
-            sess.run(init)
-            saver.restore(sess, self.save_path)
-            return np.asarray(sess.run(self.model, feed_dict={self.x: data, self.keep_prob: 1.}))
+        return np.asarray(sess.run(self.model, feed_dict={self.x: data, self.keep_prob: 1.}))

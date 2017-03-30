@@ -6,6 +6,8 @@ import select
 import builddata
 import threading
 import websocket
+import tensorflow as tf
+
 import emotionclassifier
 
 
@@ -138,34 +140,39 @@ class MyThread (threading.Thread):
 
 def run():
     global averages
+    init, saver = tf.global_variables_initializer(), tf.train.Saver()
     start, video, q = time.clock(), cv2.VideoCapture(0), []
     classifier = emotionclassifier.EmotionClassifier(int(sys.argv[3]), sys.argv[2])
-    if video.grab():
-        while running:
-            _, frame = video.read()
-            face = builddata.get_face_from_frame(frame)
-            if face:
-                temp = []
-                print 'Face Found'
-                classification = classifier.classify(face)[0]
-                if len(q) < 10:
-                    q.insert(0, classification)
+    with tf.Session() as sess:
+        sess.run(init)
+        saver.restore(sess, classifier.save_path+'model.cpkt')
+        if video.grab():
+            while running:
+                _, frame = video.read()
+                face = builddata.get_face_from_frame(frame)
+                if face:
+                    temp = []
+                    print 'Face Found'
+                    classification = classifier.classify(face, sess)[0]
+                    if len(q) < 10:
+                        q.insert(0, classification)
+                    else:
+                        q.pop()
+                        q.insert(0, classification)
+                    for i in range(len(q[0])):
+                        average = 0
+                        for j in range(len(q)):
+                            average += q[j][i] / 10
+                        temp.append(average)
+                    averages = temp
+                    print averages
                 else:
-                    q.pop()
-                    q.insert(0, classification)
-                for i in range(len(q[0])):
-                    average = 0
-                    for j in range(len(q)):
-                        average += q[j][i] / 10
-                    temp.append(average)
-                averages = softmax(temp)
-            else:
-                print 'Face Not Found'
-            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-                raw_input()
-                break
-    else:
-        print 'No Camera'
+                    print 'Face Not Found'
+                if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                    raw_input()
+                    break
+        else:
+            print 'No Camera'
 
 
 def softmax(array):
