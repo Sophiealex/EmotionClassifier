@@ -192,13 +192,13 @@ class EmotionClassifier:
                     summary.value.add(tag='Loss', simple_value=(avg_loss / len(batches)))
                 summary_writer.add_summary(summary, epoch)
                 if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
-                    saver.save(sess, self.save_path) if self.save_path != '' else ''
+                    saver.save(sess, self.save_path+'Checkpoints/model', global_step=epoch) if self.save_path != '' else ''
                     end = time.clock()
                     print 'Epoch', '%03d' % (epoch + 1), ' Time = {:.2f}'.format(end - start),\
                         ' Loss = {:.5f}'.format(avg_loss / len(batches))
                     # ' Accuracy = {:.5f}'.format(avg_acc / len(batches)), \
 
-            saver.save(sess, self.save_path+'model.cpkt') if self.save_path != '' else ''
+            saver.save(sess, self.save_path+'model') if self.save_path != '' else ''
             batches = split_data(testing_data, batch_size)
             avg_acc, labels, _y = 0, np.zeros(0), []
             for batch in batches:
@@ -227,7 +227,7 @@ class EmotionClassifier:
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
         with tf.Session() as sess:
             sess.run(init)
-            saver.restore(sess, self.save_path)
+            saver.restore(sess, self.save_path+'model')
             batches = split_data(testing_data, batch_size)
             avg_acc = 0
             for batch in batches:
