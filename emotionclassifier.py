@@ -136,7 +136,8 @@ class EmotionClassifier:
 
         fc1 = tf.reshape(local2, [-1, 15488])
         fc1 = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
-        return tf.nn.softmax(fc1)
+        #return tf.nn.softmax(fc1)
+        return fc1
 
     def local(self, previous_layer, kernel_size, channels, weight_name, bias_name):
         shape = previous_layer.get_shape()
@@ -192,7 +193,7 @@ class EmotionClassifier:
                     summary.value.add(tag='Loss', simple_value=(avg_loss / len(batches)))
                 summary_writer.add_summary(summary, epoch)
                 if epoch % intervals == 0 and intervals != 0 and i == (len(batches)-1):
-                    saver.save(sess, self.save_path+'Checkpoints/model', global_step=epoch) if self.save_path != '' else ''
+                    #saver.save(sess, self.save_path+'Checkpoints/model', global_step=epoch) if self.save_path != '' else ''
                     end = time.clock()
                     print 'Epoch', '%03d' % (epoch + 1), ' Time = {:.2f}'.format(end - start),\
                         ' Loss = {:.5f}'.format(avg_loss / len(batches))

@@ -248,7 +248,8 @@ def get_face(image):
             face = image[top:bottom, left:right]
             data.append(cv2.resize(face, (88, 88)))
         return data
-    except Exception:
+    except Exception as err:
+        print err
         return 0
 
 

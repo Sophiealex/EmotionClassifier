@@ -47,10 +47,14 @@ def main():
 
         elif mode == 'classify':
             if len(sys.argv) > 4:
-                start = time.clock()
-                face = builddata.get_face(sys.argv[2])
-                classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
-                classification = classifier.classify(face)
+                with tf.Session() as sess:
+                    classifier = emotionclassifier.EmotionClassifier(int(sys.argv[4]), sys.argv[3])
+                    init, saver = tf.global_variables_initializer(), tf.train.Saver()
+                    sess.run(init)
+                    saver.restore(sess, classifier.save_path + 'model')
+                    start = time.clock()
+                    face = builddata.get_face_from_file(sys.argv[2])
+                    classification = classifier.classify(face, sess)
                 end = time.clock()
                 print sys.argv[2]+' classified as '+str(numpy.argmax(classification[0]))+' in '+str(end-start)+'s'
                 print classification[0]
