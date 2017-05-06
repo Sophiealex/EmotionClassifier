@@ -106,13 +106,15 @@ class EmotionClassifier:
             'wc2': tf.Variable(tf.random_normal([5, 5, 64, 32])),
             'lc1': tf.Variable(tf.random_normal([3, 3, 32, 1])),
             'lc2': tf.Variable(tf.random_normal([3, 3, 32, 1])),
-            'out': tf.Variable(tf.random_normal([15488, num_classes]))
+            'fc1': tf.Variable(tf.random_normal([15488, 1024]),
+            'out': tf.Variable(tf.random_normal([1024, num_classes]))
         }
         biases = {
             'bc1': tf.Variable(tf.random_normal([64])),
             'bc2': tf.Variable(tf.random_normal([32])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
+            'fc1': tf.Variable(tf.randon_normal([1025]),
             'out': tf.Variable(tf.random_normal([num_classes]))
         }
 
@@ -135,9 +137,9 @@ class EmotionClassifier:
         local2 = tf.nn.dropout(local2, self.keep_prob)
 
         fc1 = tf.reshape(local2, [-1, 15488])
-        fc1 = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
+        fc1 = tf.add(tf.matmul(fc1, weights['fc1']), biases['fc1'])
         #return tf.nn.softmax(fc1)
-        return fc1
+        return tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
     def local(self, previous_layer, kernel_size, channels, weight_name, bias_name):
         shape = previous_layer.get_shape()
