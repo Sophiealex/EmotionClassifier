@@ -114,7 +114,7 @@ class EmotionClassifier:
             'bc2': tf.Variable(tf.random_normal([32])),
             'bl1': tf.Variable(tf.random_normal([32])),
             'bl2': tf.Variable(tf.random_normal([32])),
-            'fc1': tf.Variable(tf.randon_normal([1025]),
+            'fc1': tf.Variable(tf.random_normal([1024]),
             'out': tf.Variable(tf.random_normal([num_classes]))
         }
 
